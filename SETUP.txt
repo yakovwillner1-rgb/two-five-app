@@ -1,0 +1,37 @@
+2-5 Into Anything: setup
+
+1. PUT IT ONLINE (once, free)
+   - Go to https://app.netlify.com/drop and sign up for a free account.
+   - Drag this whole "2-5-app" folder onto the page.
+   - You get a link like https://something.netlify.app (rename it in Site settings).
+
+2. MAC: INSTALL IT
+   - Open the link in Google Chrome.
+   - Click the install icon at the right end of the address bar
+     (or Chrome menu > Cast, Save and Share > Install page as app).
+   - It opens in its own window and lives in your Dock.
+
+3. HEAR YOUR LOGIC PIANO INSTEAD OF THE BUILT-IN SOUND (one-time setup)
+   a. Open Audio MIDI Setup (in Applications > Utilities).
+      Window > Show MIDI Studio > double-click "IAC Driver" >
+      tick "Device is online" > Apply. Close it.
+   b. In Logic, make a Software Instrument track with your piano VST and
+      select that track. (Logic plays the selected track from every MIDI
+      input, so nothing else to set.)
+   c. In the app: click "Connect MIDI to play through Logic" (bottom of the
+      sidebar), allow MIDI, then set Sound to "IAC Driver Bus 1".
+   Now every play button, voicing, scale and the on-screen keys play
+   through your VST. Your MIDI keyboard plays Logic as usual, and the app
+   listens to it on the Play it page.
+   - Logic needs to be open with the piano track selected.
+   - Switch Sound back to "Built-in sound" any time.
+
+4. IPAD
+   - Open the link in Safari > Share > Add to Home Screen.
+   - Works offline with the built-in sound and the on-screen keys.
+     (iPad web apps can't use MIDI.)
+
+5. UPDATING
+   - Drag a new version of the folder onto the same site
+     (Netlify > your site > Deploys). Apps pick it up the next time
+     you open them (open twice to be sure).
