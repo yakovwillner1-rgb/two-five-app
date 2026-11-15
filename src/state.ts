@@ -4,7 +4,7 @@ import { HOME, homeChords, homeKey, homeTitle } from './theory/home';
 import { bestMode, modeInfo, type ModeView } from './theory/modes';
 import type { Family, Flavor, HomeChord, HomeMode, Key, ModeDetail, Note, ScaleType } from './theory/types';
 
-export type Tab = 'move' | 'prog' | 'play' | 'quiz' | 'map' | 'modes' | 'chart' | 'guide';
+export type Tab = 'move' | 'prog' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
 /**
  * One chord of the progression: a degree of the home key, or a typed symbol. `via` is the passing used
  * to get here from the chord before: "techniqueId.variant", or just "secIIV" (= its first variant), or null.

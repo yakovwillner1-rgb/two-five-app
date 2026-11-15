@@ -4,10 +4,11 @@ import { S, curMode, curTitle, modeRootPc, rootCtx, save, type Tab } from '../st
 import { HOME, homeKey } from '../theory/home';
 import { fmt } from '../theory/notes';
 import type { HomeMode } from '../theory/types';
-import { resetReg, soundBox, tempoHTML } from './pieces';
+import { cache, resetReg, soundBox, tempoHTML } from './pieces';
 import { bindPiano, drawPlay, viewPlay } from './play';
 import { hidePop } from './popover';
 import { viewChart } from './views/chart';
+import { viewExt } from './views/ext';
 import { viewGuide } from './views/guide';
 import { viewMap } from './views/map';
 import { viewModes } from './views/modes';
@@ -22,14 +23,15 @@ const ICONS: Record<Tab, string> = {
   quiz: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
   map: '<path d="M5 6h14M5 12h14M5 18h9"/>',
   modes: '<path d="M3 17l4-4 4 3 5-7 5-3"/>',
+  ext: '<path d="M4 18V8M9 18V5M14 18v-7M19 18V9"/><path d="M3 21h18"/>',
   chart: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/>',
   guide: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
 };
 const ico = (k: Tab): string => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
-const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
-export const TITLES: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
-const SHORT: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progress', quiz: 'Drill', map: 'Cheat', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
-const VIEWS: Record<Tab, () => string> = { play: viewPlay, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
+const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
+export const TITLES: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', ext: 'Extensions', chart: 'Charts', guide: 'Guide' };
+const SHORT: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progress', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
+const VIEWS: Record<Tab, () => string> = { play: viewPlay, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, ext: viewExt, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
 let dir = '';
@@ -51,7 +53,7 @@ function renderShell(): void {
 }
 function renderPlayer(): void {
   const t = S.tab, pl = $('player');
-  if (t === 'guide' || t === 'chart' || t === 'play') { pl.hidden = true; return; }
+  if (t === 'guide' || t === 'chart' || t === 'play' || t === 'ext') { pl.hidden = true; return; }
   pl.hidden = false;
   let lab = '', now = '';
   if (t === 'move') { const m = moveModel(); lab = m.sel ? m.sel.name : 'The move'; now = [...(m.sel?.replacesFrom ? [] : [m.from]), ...(m.sel?.chords ?? []), m.to].map(c => c.symbol).join(' → '); }
@@ -68,6 +70,7 @@ function renderPlayer(): void {
 }
 export function render(): void {
   hidePop(); resetReg();
+  cache.seqs = {}; cache.scales = {};
   renderShell();
   const v = $('view');
   v.innerHTML = VIEWS[S.tab]();

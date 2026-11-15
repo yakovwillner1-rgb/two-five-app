@@ -8,6 +8,8 @@ import type { Ranked } from '../../theory/passing/rank';
 import type { Suggestion } from '../../theory/passing/types';
 import { famOfKind, romanNumeral, type PChord } from '../../theory/symbols';
 import type { Chord, HomeChord } from '../../theory/types';
+import { extensionOptions, scaleChoices } from '../../theory/tensions';
+import { optionChip, scaleChips, tensionLine } from '../extensions';
 import { chordKeys, esc, findWay, pickChord, playTones, rankedWays, wayButton, wayKey } from '../passing';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
@@ -81,6 +83,15 @@ export function viewMove(): string {
     detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', S.toSym && !m.badTo ? null : m.H[S.to]),
   ].join('');
   cache.chords.mf = { tones: playTones(m.from) };
+  /* each chord of the path: its scale, its tensions, and extended versions that lead into the next chord */
+  const ext = `<div class="panel"><h3>Extensions that lead on</h3><p class="small" style="margin:0 0 10px">Each chord's scale decides which extensions fit. Tap an extended chord to hear it go into the next chord. The lines under it say where each added note moves.</p>
+    <div class="extrows">${seq.map((c, i) => {
+      const next = i < seq.length - 1 ? seq[i + 1] : null, ch = scaleChoices(c, next, key)[0], opts = extensionOptions(c, next, key);
+      return `<div class="extrow ${cls[i]}"><div class="exth"><span class="cs2">${c.symbol}</span>${next ? `<span class="arr">→</span><span class="small">${next.symbol}</span>` : '<span class="small">landing chord</span>'}<span class="cn">${ch.scale.name}</span></div>
+        <div class="small">${ch.why}</div>${scaleChips(ch.scale)}${tensionLine(ch.scale)}
+        ${opts.length ? `<div class="extopts">${opts.map((o, j) => optionChip(o, `e${i}_${j}`, next)).join('')}</div>` : ''}</div>`;
+    }).join('')}</div>
+    <p class="small" style="margin:10px 0 0">Rules and sources: see <button class="linkbtn" data-a="tab" data-v="ext">Extensions</button> under Reference.</p></div>`;
   /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
   const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
   const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('') : '';
@@ -100,6 +111,7 @@ export function viewMove(): string {
    ${s ? `<div class="duo"><div class="panel why"><h3>What's happening · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}</h3>${why}</div>
    <div class="panel"><h3>Voice‑leading lines</h3><p class="small" style="margin:0">The 3rds and 7ths move by small steps. Hum these and you hear the whole move.</p>
      <div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div></div></div>` : ''}
+   ${ext}
    <div class="cards">${cards}</div>
    </div>`;
 }

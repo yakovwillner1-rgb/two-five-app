@@ -15,7 +15,7 @@ export function resetReg(): void { REG = {}; rc = 0; }
 /** Voicings currently shown in the popover (data-v indexes into this). */
 export let VOICES: Voicing[] = [];
 /** Chords behind the "Hear" buttons of the current view. */
-export const cache: { chords: Record<string, { tones: Note[] }>; qz: Chord[] } = { chords: {}, qz: [] };
+export const cache: { chords: Record<string, { tones: Note[] }>; qz: Chord[]; /** chord sequences behind data-a="seq" buttons */ seqs: Record<string, Note[][]>; /** scales behind data-a="extscale" */ scales: Record<string, Note[]> } = { chords: {}, qz: [], seqs: {}, scales: {} };
 
 export function voicingPanel(c: Chord): string {
   VOICES = allVoicings(c);

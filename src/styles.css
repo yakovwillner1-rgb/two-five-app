@@ -355,7 +355,7 @@ main{flex:1;padding:22px 0 40px}
   .side{display:none}
   .brand-sm{display:block}
   .hdr .htitle{display:none}
-  .tabbar{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,14,19,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:2px 4px env(safe-area-inset-bottom)}
+  .tabbar{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,14,19,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:2px 4px env(safe-area-inset-bottom)}
   .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;color:var(--muted);font-size:.68rem;font-weight:600;white-space:nowrap}
   .tabbar svg{width:22px;height:22px}
   .tabbar button[aria-current="page"]{color:var(--gold)}
@@ -406,3 +406,28 @@ main{flex:1;padding:22px 0 40px}
 .wayspanel .way[aria-pressed="true"]{background:color-mix(in srgb,var(--gold) 14%,var(--panel2))}
 .whyl{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:1px}
 .why p:first-of-type{font-size:1rem}
+/* ---------------- chord scales and extensions ---------------- */
+.n.tn{border-color:var(--c2);color:var(--c2)}
+.n.av{border-color:var(--c5);color:var(--c5);text-decoration:line-through;opacity:.8}
+.n.cau{border-style:dashed}
+.extcau{color:var(--gold)}
+.extrows{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:12px}
+.extrow{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);border-top:4px solid var(--rc);min-width:0}
+.exth{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 8px}
+.exth .cs2{font-family:var(--display);font-weight:800;font-size:1.35rem}
+.exth .cn{margin-left:auto;font-family:var(--mono);font-size:.78rem;color:var(--rc)}
+.extopts{display:flex;flex-direction:column;gap:6px}
+.extopt{display:flex;flex-direction:column;gap:3px;text-align:left;padding:8px 10px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.extopt:hover{border-color:var(--gold)}
+.extopt .eo{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.extopt .wc{font-family:var(--display);font-weight:700;font-size:1.05rem}
+.extopt small{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.extopt .em{font-size:.78rem;color:#c9cfdb;line-height:1.35}
+.cards.extcards{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.cards.extcards .card:last-child{grid-column:auto}
+.extcard .extopts{flex-direction:row;flex-wrap:wrap}
+.extcard .extopt{flex:1 1 140px}
+.srcs{padding-left:1.2em;margin:0}
+.srcs li{margin:8px 0}
+.srcs a{color:var(--gold)}
+@media (max-width:640px){.tabbar button{font-size:.54rem}}
