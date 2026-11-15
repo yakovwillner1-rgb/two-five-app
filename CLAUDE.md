@@ -1,7 +1,9 @@
 # 2-5 Into Anything — instructions for Claude Code
 
-Practice app for jazz/gospel/neo-soul harmony: passing 2-5s, modes, voicings, MIDI practice,
-and (being built) a passing-chord engine and a reharmonizer that reads the user's Logic MIDI files.
+Practice app for **passing chords** across genres: every way to get from one chord to the next
+(the 2-5 is just one technique), plus modes, voicings, MIDI practice, and (being built) a
+reharmonizer that reads the user's Logic MIDI files. The app started as a 2-5 tool; Phase 1
+reframes it around all passing chords (see "Product direction" in docs/SPEC.md).
 
 **Read `docs/SPEC.md` before any work.** It holds the full plan, the theory rules, the test cases
 and the definition of done for every phase.

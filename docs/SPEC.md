@@ -5,6 +5,31 @@ Today the whole app is one file, `index.html` (~100 KB, vanilla JS). Treat it as
 implementation for existing behavior while porting.
 
 ---------------------------------------------------------------------------------------------------
+## Product direction (read first)
+
+**This is a passing-chord app, not a 2-5 app.** The 2-5 is one technique among many. Everywhere the
+app today says "2-5", the target design says "passing chord", and the user picks (or the style
+picks) which technique to use. Concretely, after Phase 1:
+
+- **Move → "Connect"**: FROM chord → TO chord → every passing technique that connects them
+  (secondary ii–V is one card among secondary dominant, tritone sub, backdoor, diminished, chromatic,
+  borrowed, etc.), ranked by the selected genre × feel.
+- **Progression**: each chord gets a "+ passing" control instead of "+ 2-5": pick a technique per
+  chord, or "Auto" (style chooses), or "Surprise me". "Passing into every chord" replaces
+  "2-5 into every chord".
+- **Cheat sheet**: for every chord in the key, the top passing options per technique, not just its 2-5.
+- **2-5 color (Auto/Bright/Dark)** is folded into the style system (genre × feel); bright/dark
+  remain as feel options.
+- **Drill**: "spell the passing chord", "name the technique by ear", across all techniques.
+- **Play it**: practice any connection, progression or reharm, whatever techniques it uses.
+- **Voicings**: unchanged behavior, applied to every passing chord.
+- **Copy/UI text**: remove "2-5" framing from headings, empty states and help text except where
+  the technique itself is a ii–V. Name/title: keep "2-5 Into Anything" until Ralph picks a new
+  name (ask him; renaming the repo changes the live URL).
+
+Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe happens in Phase 1.
+
+---------------------------------------------------------------------------------------------------
 ## 0. Existing features (must keep working)
 
 - **Home key** picker: circle-of-fifths popover, ‹ › arrows, swipe, Major/Minor keys.
@@ -40,12 +65,14 @@ implementation for existing behavior while porting.
 - **Done when:** live site behaves identically, `npm test` green, Lighthouse PWA installable.
 
 ---------------------------------------------------------------------------------------------------
-## Phase 1 — Passing-chord engine + style system + explanations
+## Phase 1 — Passing-chord engine, style system, explanations + reframe the app around it
 
-New tab **"Passing"**: pick FROM and TO chords (diatonic, or type any chord symbol). Show every
-technique that connects them, as cards ranked by the current style. Each card: chord symbols,
-roman-numeral analysis, voicing on a keyboard, play button (plays FROM → passing → TO through
-the current sound output), and the "why" text.
+The **Move tab becomes "Connect"** (see Product direction): pick FROM and TO chords (diatonic, or
+type any chord symbol). Show every technique that connects them, as cards ranked by the current
+style. Each card: chord symbols, roman-numeral analysis, voicing on a keyboard, play button (plays
+FROM → passing → TO through the current sound output), and the "why" text. Then convert
+Progression, Cheat sheet, Drill and Play it to the technique-based model described above; the
+secondary ii–V is just the `secIIV` technique.
 
 ### 1.1 Technique catalogue (each is a pure function `(from, to, key, ctx) → Suggestion[]`)
 | id | technique | rule |
@@ -107,8 +134,9 @@ Every suggestion explains, in ≤4 short bullets:
 - Upper structure: D triad over C7 = C13♯11 (C E B♭ + D F♯ A); E♭ triad over G7 = G7♯9♭13.
 - Spelling: tritone sub of A7 is E♭7 (not D♯7); secondary dominant of ii in G♭ major is E♭7.
 
-**Done when:** Passing tab live; all catalogue tests green; every card plays through IAC and the
-built-in synth; style switch visibly reorders/filters results.
+**Done when:** Connect tab live and Progression / Cheat sheet / Drill / Play it all use the
+technique model; no leftover "2-5"-only wording outside ii–V contexts; all catalogue tests green;
+every card plays through IAC and the built-in synth; style switch visibly reorders/filters results.
 
 ---------------------------------------------------------------------------------------------------
 ## Phase 2 — Melody on top (lead voicing)
