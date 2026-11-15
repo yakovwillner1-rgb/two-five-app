@@ -10,10 +10,11 @@ import type { Family, Flavor, HomeMode, ScaleType } from '../theory/types';
 import type { Genre } from '../data/styles';
 import type { Feel } from '../data/techniques';
 import { VOICES, cache, chordByKey } from './pieces';
-import { drawPlay, resetPL } from './play';
+import { drawPlay, releaseAll, resetPL } from './play';
 import { findWay, progChord } from './passing';
 import { hidePop, pickerJustClosed, showPicker, showPop, showSheet } from './popover';
 import { render, setDir } from './render';
+import { listenAction } from './views/listen';
 import { viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
 
@@ -29,6 +30,7 @@ function onClick(e: MouseEvent): void {
   const b = (e.target as Element).closest<HTMLElement>('[data-a]');
   if (!b || (b as HTMLButtonElement).disabled) return;
   const a = b.dataset.a, d = b.dataset, H = () => curChords();
+  if (S.tab === 'listen' && a && listenAction(a, d)) { stopAll(); render(); return; }
   switch (a) {
     case 'mode': setMode(d.v as HomeMode); stopAll(); render(); break;
     case 'kprev': step(-1); break;
@@ -62,7 +64,7 @@ function onClick(e: MouseEvent): void {
     case 'eans': S.ear!.ans = +d.d!; S.escore.t++; if (S.ear!.ans === S.ear!.deg) S.escore.r++; stopAll(); render(); break;
     case 'enext': newEar(); render(); playScale(earNotes()); break;
     case 'eopen': S.mfam = S.ear!.fam; S.mdeg = S.ear!.deg; S.mroot = S.ear!.pc; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); window.scrollTo(0, 0); break;
-    case 'tab': S.tab = d.v as Tab; stopAll(); render(); window.scrollTo(0, 0); break;
+    case 'tab': if (S.tab === 'listen' && S.llatch) releaseAll(); S.tab = d.v as Tab; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'from': S.from = +d.d!; S.fromSym = null; S.fromExt = null; stopAll(); render(); break;
     case 'to': S.to = +d.d!; S.toSym = null; S.toExt = null; stopAll(); render(); break;
     case 'flavor': S.flavor = d.v as Flavor; stopAll(); render(); break;
