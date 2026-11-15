@@ -2,6 +2,7 @@ import './styles.css';
 import { stopAll } from './audio/player';
 import { connectMIDI, midi, midiHooks } from './midi/input';
 import { S, load } from './state';
+import { KINDS, type KindId } from './theory/symbols';
 import { initActions } from './ui/actions';
 import { refreshSound } from './ui/pieces';
 import { drawMidi, noteOff, noteOn, resetPL } from './ui/play';
@@ -17,7 +18,7 @@ initActions();
 
 Object.assign(S, load());
 /* Settings saved by earlier versions: progression items were { d, a } with a = "2-5 in front". */
-S.prog = (S.prog as unknown as { d: number; a?: boolean; sym?: string; via?: string | null }[]).map(p => ({ d: p.d, ...(p.sym ? { sym: p.sym } : {}), via: p.via !== undefined ? p.via : p.a ? 'secIIV' : null }));
+S.prog = (S.prog as unknown as { d: number; a?: boolean; sym?: string; ext?: string; via?: string | null }[]).map(p => ({ d: p.d, ...(p.sym ? { sym: p.sym } : {}), ...(p.ext && p.ext in KINDS ? { ext: p.ext as KindId } : {}), via: p.via !== undefined ? p.via : p.a ? 'secIIV' : null }));
 if (!TITLES[S.tab]) S.tab = 'move';
 render();
 if (S.midiOn && midi.state === 'idle') connectMIDI();

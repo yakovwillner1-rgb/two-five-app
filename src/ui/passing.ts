@@ -3,8 +3,8 @@ import { pcOf } from '../theory/notes';
 import { passingChords } from '../theory/passing/engine';
 import { rankSuggestions, type Ranked } from '../theory/passing/rank';
 import type { Suggestion } from '../theory/passing/types';
-import { fromChart, parseChord, passVoicing, type KindId, type PChord } from '../theory/symbols';
-import { extensionOptions, plainOf } from '../theory/tensions';
+import { KINDS, fromChart, makeChord, parseChord, passVoicing, type KindId, type PChord } from '../theory/symbols';
+import { baseKind, extensionOptions, plainOf } from '../theory/tensions';
 import type { Note } from '../theory/types';
 import { kbAbs, type KeyItem } from './keyboards';
 
@@ -68,5 +68,15 @@ export function wayButton(s: Suggestion, attrs: string, on: boolean, dim = false
     <span class="wt">${s.ext && s.ext.fit !== null ? `<span class="ptag fit" title="How smoothly your extensions carry through this way">ext ${Math.round(s.ext.fit * 100)}%</span>` : ''}${s.colorTags.map(t => `<span class="ptag${t === S.pfeel ? ' on' : ''}">${t}</span>`).join('')}<span class="bright" style="margin:0 0 0 auto" title="Tension">${[0, 1, 2, 3, 4].map(k => `<i class="${k < bars ? 'on' : ''}"></i>`).join('')}</span></span>
   </button>`;
 }
-/** The chord a progression item stands for. */
-export const progChord = (p: ProgChord): PChord => pickChord(p.sym, p.d).chord;
+/** The chord a progression item stands for, before its picked extension. */
+export const progBase = (p: ProgChord): PChord => pickChord(p.sym, p.d).chord;
+/**
+ * The chord a progression item stands for. A picked extension replaces the chord type when it is
+ * an extended version of that same chord (so it still holds after the chords around it change).
+ */
+export function progChord(p: ProgChord): PChord {
+  const c = progBase(p);
+  if (!p.ext || c.bass || c.upper || !(p.ext in KINDS)) return c;
+  const plain = plainOf(c);
+  return baseKind(p.ext) === plain.kind ? makeChord(plain.root, p.ext) : c;
+}
