@@ -1,8 +1,8 @@
 # 2-5 Into Anything — full spec
 
 Live: https://yakovwillner1-rgb.github.io/two-five-app/
-Today the whole app is one file, `index.html` (~100 KB, vanilla JS). Treat it as the reference
-implementation for existing behavior while porting.
+Until Phase 0 the whole app was one file, `index.html` (~100 KB, vanilla JS; see git history). Its
+theory code is kept verbatim in `tests/legacy/legacyTheory.js` as the reference for parity tests.
 
 ---------------------------------------------------------------------------------------------------
 ## Product direction (read first)
@@ -205,7 +205,8 @@ play/export → drag into Logic → lines up with the original region.
 
 ---------------------------------------------------------------------------------------------------
 ## Checklist
-- [ ] Phase 0 port + tests + Actions deploy + SW fix
+- [x] Phase 0 port + tests + Actions deploy + SW fix (on branch `phase-0-vite-ts-port`; live-site check
+      pending: merge to `main` and set Pages source to "GitHub Actions")
 - [ ] Phase 1 Passing engine, styles, explanations
 - [ ] Phase 2 Lead voicing
 - [ ] Phase 3 MIDI reharm
