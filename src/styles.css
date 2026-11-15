@@ -355,7 +355,7 @@ main{flex:1;padding:22px 0 40px}
   .side{display:none}
   .brand-sm{display:block}
   .hdr .htitle{display:none}
-  .tabbar{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,14,19,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:2px 4px env(safe-area-inset-bottom)}
+  .tabbar{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,14,19,.97);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:2px 4px env(safe-area-inset-bottom)}
   .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;color:var(--muted);font-size:.68rem;font-weight:600;white-space:nowrap}
   .tabbar svg{width:22px;height:22px}
   .tabbar button[aria-current="page"]{color:var(--gold)}
@@ -437,3 +437,16 @@ main{flex:1;padding:22px 0 40px}
 .extpick .seg button{font-family:var(--display);font-weight:700}
 .pick .extnote{grid-column:1/-1;margin:0}
 .ptag.fit{border-color:var(--c0);color:var(--c0)}
+
+/* Listen */
+.lnow{min-height:230px;position:relative}
+.lhear{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:10px}
+.lbar{display:block;width:min(260px,70%);height:5px;border-radius:999px;background:var(--line);overflow:hidden}
+.lbar i{display:block;height:100%;width:100%;background:var(--gold);transform-origin:left;animation:lfill var(--d) linear both}
+@keyframes lfill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.lalts{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:6px}
+.lalts .lbl{margin:0}
+.lpath{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 6px;font-family:var(--display);font-weight:800;font-size:1.5rem}
+.llog{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.llog .chip{display:inline-flex;align-items:center}
+.lmsg{margin:10px 0 0;color:#59d18f}

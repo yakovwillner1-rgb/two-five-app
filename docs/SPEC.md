@@ -48,6 +48,10 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
 - **Extensions in the move**: on Move, pick an extension on the start and landing chord. Plain passing
   7th chords take the extension that connects best (scale by resolution), ways are re-ranked by how
   smoothly the picked notes carry through ("ext %"), and the why-panel says where each note goes.
+- **Listen**: play a chord (Web MIDI or on-screen keys, with a tap-to-hold latch). After the hold
+  time the chord is named (inversions, missing 5th, rootless voicings; other readings one tap away),
+  logged, and the app lists where it usually goes and the ranked ways to get there. Any of it can be
+  added to Progression or opened in Move. No microphone.
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.

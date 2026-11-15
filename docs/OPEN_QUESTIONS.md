@@ -95,3 +95,21 @@ Numbers and labels (tunable data, not theory)
     carries C♯ (its Dorian 9) while Am has C. Keep, or hold the ii at m7 / m7add11 there?
 36. **Plain chords stay plain:** with no extension picked, passing chords are not extended, even
     though each genre lists favorite extensions. Should the genre add them by default?
+
+## From the Listen tab
+37. **Hold time:** a chord counts after 0.5 s without a change (0.3 s and 1 s are offered). The
+    sustain pedal is not read yet, so keys must stay down. Should the pedal hold notes?
+38. **Same notes, two names:** the bass decides (C–E–G–A = C6 on C, Am7 on A). With neither root in
+    the bass a 7th chord is preferred to a 6th chord (E–G–A–C = Am7/E). OK?
+39. **Rootless voicings** are only read for 7th chords with an extension, and a reading with the
+    root in the bass always comes first (F–A–B–E shows Fmaj7♯11, with G13 and D♭7♯9♭13 one tap
+    away). Would you rather have rootless readings first when you play in the left-hand register?
+40. **Spelling of roots outside the key:** flats (♭II, ♭III, ♭V, ♭VI, ♭VII), except diminished and
+    half-diminished chords, which are raised degrees (C♯°7, F♯m7♭5 in C). OK?
+41. **Next-chord list** follows the classical chart (rule 17). It leaves out pop moves such as
+    V → IV and I → ♭VII. Add those as extra options, marked by genre?
+42. **Melody, single notes, two-note shells** are not read yet (three different notes minimum).
+    Planned with the melody work.
+43. **Key detection** only suggests another key of the same mode when at least two more of the
+    heard chords fit it. It never switches by itself.
+

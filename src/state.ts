@@ -5,7 +5,7 @@ import { bestMode, modeInfo, type ModeView } from './theory/modes';
 import type { Family, Flavor, HomeChord, HomeMode, Key, ModeDetail, Note, ScaleType } from './theory/types';
 import type { KindId } from './theory/symbols';
 
-export type Tab = 'move' | 'prog' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
+export type Tab = 'move' | 'prog' | 'listen' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
 /**
  * One chord of the progression: a degree of the home key, or a typed symbol. `via` is the passing used
  * to get here from the chord before: "techniqueId.variant", or just "secIIV" (= its first variant), or null.
@@ -24,6 +24,8 @@ export interface State {
   voiceHover: boolean;
   /* Move tab: style, typed FROM/TO symbols (override from/to), the chosen way ("techniqueId.variant") */
   pgenre: Genre; pfeel: Feel; fromSym: string | null; toSym: string | null; fromExt: KindId | null; toExt: KindId | null; way: string | null; pshowAll: boolean;
+  /* Listen tab: how long (ms) notes must be held before the chord counts; tap-to-hold for the on-screen keys */
+  lhold: number; llatch: boolean;
   /** last typed progression chord that could not be read (not saved) */
   progBad: string | null;
 }
@@ -32,7 +34,7 @@ export const S: State = {
   prog: [{ d: 0, via: null }, { d: 3, via: 'secIIV' }], quiz: null, score: { r: 0, t: 0 }, tipDone: false, soundOut: null,
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
   mfam: 'major', mview: 'parallel', mdeg: 1, mroot: null, dmode: 'spell', efam: 'major', ear: null, escore: { r: 0, t: 0 }, voiceHover: true,
-  pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, fromExt: null, toExt: null, way: null, pshowAll: false, progBad: null,
+  pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, fromExt: null, toExt: null, way: null, pshowAll: false, progBad: null, lhold: 500, llatch: false,
 };
 
 /* Same storage key as the single-file app, so saved settings carry over. */
@@ -41,7 +43,7 @@ const snap = () => ({
   soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
-  pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way,
+  pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way, lhold: S.lhold, llatch: S.llatch,
 });
 export function save(): void { try { localStorage.setItem(LSK, JSON.stringify(snap())); } catch (e) { /* storage full or blocked */ } }
 export function load(): Partial<State> { try { return JSON.parse(localStorage.getItem(LSK) || '{}') || {}; } catch (e) { return {}; } }

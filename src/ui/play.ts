@@ -12,6 +12,10 @@ import { progSteps } from './views/prog';
 
 /* Play it: Web MIDI input + on-screen piano, checked by the pure PlaySession. */
 const held = new Set<number>(), ptrNote: Record<number, number> = {};
+/** Set by the Listen tab: called whenever the held notes change while it is open. */
+export const heldHook = { changed: (_held: Set<number>): void => {} };
+/** Let go of every held note (latched on-screen keys). */
+export function releaseAll(): void { [...held].forEach(noteOff); }
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
 let chkT: ReturnType<typeof setTimeout> | undefined, flashT: ReturnType<typeof setTimeout> | undefined;
 
@@ -38,7 +42,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   const out = getOut();
   if (src === 'screen' && out) { screenOn.add(n); sendOn(out, n, 85); }
   else if (!out && (src === 'screen' || S.psound)) { const c = audio(); tone(n, c.currentTime + 0.01, 1.6, 0.15); }
-  if (S.tab !== 'play' || !ses) { held.add(n); return; }
+  if (S.tab !== 'play' || !ses) { held.add(n); if (S.tab === 'listen') heldHook.changed(held); return; }
   if (!ses.done && !t0) t0 = performance.now();
   const r = ses.noteOn(n);
   if (!r.counted) { drawPlay(); return; }
@@ -49,8 +53,10 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
 }
 export function noteOff(n: number): void {
   if (screenOn.has(n)) { screenOn.delete(n); const o = getOut(); if (o) sendOff(o, n); }
-  if (ses) ses.noteOff(n); else held.delete(n);
+  if (ses) ses.noteOff(n);
+  held.delete(n);
   if (S.tab === 'play') drawKeys();
+  if (S.tab === 'listen') heldHook.changed(held);
 }
 function checkChord(): void {
   if (!ses) return;
@@ -71,7 +77,7 @@ function flash(k: 'good' | 'bad'): void {
 function midiHTML(): string {
   const none: [string, string, string] = ['warn', 'MIDI is on, but no keyboard is connected. Plug one in and it shows up here.', ''];
   const M = ({
-    idle: ['', 'Connect a MIDI keyboard and the app checks what you play. The on-screen keys below work too.', 'Connect MIDI keyboard'],
+    idle: ['', 'Connect a MIDI keyboard and the app reads what you play. The on-screen keys below work too.', 'Connect MIDI keyboard'],
     asking: ['warn', 'Waiting for permission. Allow MIDI devices if your browser asks.', ''],
     unsupported: ['warn', 'This browser can\'t read MIDI keyboards. Use Chrome or Edge on your Mac. The on-screen keys below still work.', ''],
     blocked: ['warn', 'MIDI is blocked here. Open your own copy of the app in Chrome and allow MIDI when it asks.', 'Try again'],
@@ -103,9 +109,9 @@ function targetHTML(): string {
     <div class="pbig" data-chord="${cref(c)}">${c.symbol}</div><p class="phow">${how}</p>${pstats()}`;
 }
 function pianoSVG(): string {
-  const P = ses!, lo = innerWidth < 900 ? 48 : 36, hi = 84, W = 30, H = 150, BW = 18, BH = 94, wh = [0, 2, 4, 5, 7, 9, 11];
-  const st = P.done ? null : P.steps[P.i], ghost: Record<number, string> = {};
-  if (S.phint && st) {
+  const P = S.tab === 'play' ? ses : null, lo = innerWidth < 900 ? 48 : 36, hi = 84, W = 30, H = 150, BW = 18, BH = 94, wh = [0, 2, 4, 5, 7, 9, 11];
+  const st = !P || P.done ? null : P.steps[P.i], ghost: Record<number, string> = {};
+  if (S.phint && st && P) {
     if (st.kind === 'scale') { const nx = st.seq[P.si]; if (nx != null) ghost[60 + mod(nx - 60, 12)] = fmt(st.names[P.si]); }
     else if (S.pstrict) st.voicing.notes.forEach(i => { let m = i.midi; while (m < lo) m += 12; ghost[m] = fmt(i.note); });
     else {
@@ -120,7 +126,7 @@ function pianoSVG(): string {
   for (let m = lo; m <= hi; m++) if (wh.includes(mod(m, 12))) { pos[m] = x; x += W; }
   let w = '', b = '';
   for (let m = lo; m <= hi; m++) {
-    const isW = wh.includes(mod(m, 12)), h = held.has(m) ? (P.marks[m] || 'on') : '', g = ghost[m];
+    const isW = wh.includes(mod(m, 12)), h = held.has(m) ? (P?.marks[m] || 'on') : '', g = ghost[m];
     if (isW) {
       const X = pos[m];
       w += `<rect data-n="${m}" x="${X + .5}" y=".5" width="${W - 1}" height="${H}" rx="4" class="pk-w"${h ? ` style="fill:${col[h]}"` : ''}/>`;
@@ -137,7 +143,7 @@ function pianoSVG(): string {
   return `<svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Piano keyboard">${w}${b}</svg>`;
 }
 export function drawMidi(): void { const M = document.getElementById('midibar'); if (M) M.innerHTML = midiHTML(); }
-function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && ses) K.innerHTML = pianoSVG(); }
+export function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && (ses || S.tab === 'listen')) K.innerHTML = pianoSVG(); }
 export function drawPlay(): void {
   if (S.tab !== 'play' || !ses) return;
   const T = document.getElementById('ptarget');
@@ -152,6 +158,8 @@ export function bindPiano(): void {
     if (!r) return;
     e.preventDefault();
     const n = +r.dataset.n!;
+    /* latch (Listen): a tap toggles the key, so a chord can be built with a mouse */
+    if (S.tab === 'listen' && S.llatch) { if (held.has(n)) noteOff(n); else noteOn(n, 'screen'); return; }
     ptrNote[e.pointerId] = n;
     try { K.setPointerCapture(e.pointerId); } catch (_) { /* not capturable */ }
     noteOn(n, 'screen');
