@@ -41,6 +41,11 @@ export function showPicker(el: Element): void {
   if (innerWidth < 700) { pop.className = 'pop sheet'; scrim.hidden = false; pop.style.left = ''; pop.style.top = ''; pop.style.width = ''; }
   else { pop.className = 'pop keypick'; scrim.hidden = true; placePop(el, 400); }
 }
+/** A bottom sheet with any content (used for choosing a passing in the progression). */
+export function showSheet(html: string): void {
+  hidePop(); popKind = 'sheet'; pop.innerHTML = html; pop.hidden = false;
+  pop.className = 'pop sheet'; scrim.hidden = false; pop.style.left = ''; pop.style.top = ''; pop.style.width = '';
+}
 export function showPop(key: string | undefined, el: Element | null, sheet: boolean): void {
   const c = chordByKey(key);
   if (!c || !key) return;

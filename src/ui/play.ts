@@ -6,14 +6,27 @@ import { S, curMode, curTitle } from '../state';
 import { fmt, mod, pcOf } from '../theory/notes';
 import { PlaySession, buildSteps, type Step } from '../theory/playcheck';
 import { cref, soundBox } from './pieces';
+import type { Flavor } from '../theory/types';
+import { moveModel } from './views/move';
+import { progSteps } from './views/prog';
 
 /* Play it: Web MIDI input + on-screen piano, checked by the pure PlaySession. */
 const held = new Set<number>(), ptrNote: Record<number, number> = {};
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
 let chkT: ReturnType<typeof setTimeout> | undefined, flashT: ReturnType<typeof setTimeout> | undefined;
 
-const steps = (): Step[] => buildSteps({ px: S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor: S.flavor, prog: S.prog, allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
-const playSig = (): string => JSON.stringify([S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall]);
+/* Play it checks chords it has a scale for: the chords of the key and their 2-5s. A 2-5 chosen on the
+   Move or Progression tab is used with its color; other passing chords and typed chords are skipped
+   until the voicing engine (Phase 2) can check them. */
+function steps(): Step[] {
+  const sel = S.px === 'move' ? moveModel().sel : null;
+  const flavor: Flavor = sel?.techniqueId === 'secIIV' ? (sel.variant as Flavor) : S.flavor;
+  const vias = S.px === 'prog' ? progSteps() : [];
+  const prog = S.prog.map((p, i) => ({ p, via: vias[i]?.via })).filter(x => !x.p.sym)
+    .map(({ p, via }) => ({ d: p.d, a: via?.techniqueId === 'secIIV' && via.chords.length === 2, flavor: via?.techniqueId === 'secIIV' ? (via.variant as Flavor) : undefined }));
+  return buildSteps({ px: S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor, prog, allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
+}
+const playSig = (): string => JSON.stringify([S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.way, S.pgenre, S.pfeel, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall]);
 export function resetPL(): void {
   clearTimeout(chkT);
   sig = playSig(); t0 = 0; elapsed = 0;

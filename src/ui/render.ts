@@ -1,7 +1,7 @@
 import { canPlay, syncPlay } from '../audio/player';
 import { connectMIDI, midi } from '../midi/input';
-import { S, curChords, curMode, curTitle, modeRootPc, rootCtx, save, type Tab } from '../state';
-import { HOME, approach, homeKey } from '../theory/home';
+import { S, curMode, curTitle, modeRootPc, rootCtx, save, type Tab } from '../state';
+import { HOME, homeKey } from '../theory/home';
 import { fmt } from '../theory/notes';
 import type { HomeMode } from '../theory/types';
 import { resetReg, soundBox, tempoHTML } from './pieces';
@@ -11,14 +11,12 @@ import { viewChart } from './views/chart';
 import { viewGuide } from './views/guide';
 import { viewMap } from './views/map';
 import { viewModes } from './views/modes';
-import { viewMove } from './views/move';
-import { viewPass } from './views/pass';
-import { viewProg } from './views/prog';
+import { moveModel, viewMove } from './views/move';
+import { progBars, viewProg } from './views/prog';
 import { viewQuiz } from './views/quiz';
 
 const ICONS: Record<Tab, string> = {
   move: '<path d="M4 12h13M13 6l6 6-6 6"/>',
-  pass: '<circle cx="5" cy="12" r="2.2"/><circle cx="19" cy="12" r="2.2"/><path d="M7.5 12h2M11 12h2M14.5 12h2"/>',
   play: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M7 5v8M12 5v8M17 5v8M7 13v6M12 13v6M17 13v6"/>',
   prog: '<rect x="3" y="6" width="5" height="12" rx="1.2"/><rect x="10" y="6" width="5" height="12" rx="1.2"/><rect x="17" y="6" width="4" height="12" rx="1.2"/>',
   quiz: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
@@ -28,10 +26,10 @@ const ICONS: Record<Tab, string> = {
   guide: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
 };
 const ico = (k: Tab): string => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
-const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['pass', 'Passing'], ['prog', 'Progression'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
-export const TITLES: Record<Tab, string> = { play: 'Play it', move: 'Move', pass: 'Passing chords', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
-const SHORT: Record<Tab, string> = { play: 'Play it', move: 'Move', pass: 'Passing', prog: 'Progress', quiz: 'Drill', map: 'Cheat', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
-const VIEWS: Record<Tab, () => string> = { play: viewPlay, move: viewMove, pass: viewPass, prog: viewProg, map: viewMap, modes: viewModes, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
+const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
+export const TITLES: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
+const SHORT: Record<Tab, string> = { play: 'Play it', move: 'Move', prog: 'Progress', quiz: 'Drill', map: 'Cheat', modes: 'Modes', chart: 'Charts', guide: 'Guide' };
+const VIEWS: Record<Tab, () => string> = { play: viewPlay, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
 let dir = '';
@@ -55,13 +53,12 @@ function renderPlayer(): void {
   const t = S.tab, pl = $('player');
   if (t === 'guide' || t === 'chart' || t === 'play') { pl.hidden = true; return; }
   pl.hidden = false;
-  const H = curChords();
   let lab = '', now = '';
-  if (t === 'move') { const to = H[S.to], ap = approach(to, S.flavor); lab = 'The move'; now = ap ? `${H[S.from].symbol} → ${ap.ii.symbol} → ${ap.V.symbol} → ${to.symbol}` : ''; }
-  if (t === 'prog') { const n = S.prog.length, bars = S.prog.reduce((a, p) => a + (p.a && H[p.d].landable ? 2 : 1), 0); lab = 'Progression'; now = n ? `${n} chord${n > 1 ? 's' : ''} · ${bars} bar${bars > 1 ? 's' : ''}` : 'Add some chords'; }
+  if (t === 'move') { const m = moveModel(); lab = m.sel ? m.sel.name : 'The move'; now = [...(m.sel?.replacesFrom ? [] : [m.from]), ...(m.sel?.chords ?? []), m.to].map(c => c.symbol).join(' → '); }
+  if (t === 'prog') { const n = S.prog.length, bars = progBars(); lab = 'Progression'; now = n ? `${n} chord${n > 1 ? 's' : ''} · ${bars} bar${bars === 1 ? '' : 's'}` : 'Add some chords'; }
   if (t === 'modes') { const m = curMode(); lab = 'Scale over a drone'; now = fmt(m.notes[0]) + ' ' + m.name; }
   if (t === 'quiz' && S.dmode === 'ear') { lab = 'Mystery mode'; now = 'Play it, then pick'; }
-  const flav = ['move', 'prog', 'map'].includes(t) || (t === 'quiz' && S.dmode === 'spell');
+  const flav = t === 'map' || (t === 'quiz' && S.dmode === 'spell');
   pl.innerHTML = `<div class="pl-in">
     ${canPlay() ? `<button class="playbtn" data-a="play"></button><div class="pl-l"><span class="eyebrow">${lab}</span><span class="pl-now">${now}</span></div>` : ''}
     ${['move', 'prog'].includes(t) ? `<button class="pill sm" data-a="loop" aria-pressed="${S.loop}">Loop</button>` : ''}

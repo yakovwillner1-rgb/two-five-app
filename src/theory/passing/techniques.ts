@@ -28,7 +28,7 @@ const secDom: Technique = (_from, to, _key, ctx) => {
   }];
 };
 
-/** ii–V of TO: bright (m7 → 7) or dark (m7♭5 → 7). A minor TO gets both. */
+/** ii–V of TO: bright (m7 → 7) and dark (m7♭5 → 7). Dark comes first into a minor chord, bright first otherwise. */
 const secIIV: Technique = (_from, to, _key, ctx) => {
   if (!landable(to)) return [];
   const V = makeChord(T(to.root, P5), '7'), iiRoot = T(to.root, M2), minor = isMinor(to);
@@ -41,7 +41,7 @@ const secIIV: Technique = (_from, to, _key, ctx) => {
       source: fmt(to.root) + (dark ? ' harmonic minor' : minor ? ' melodic minor' : ' major'),
     };
   };
-  return minor ? [mk(true), mk(false)] : [mk(false)];
+  return minor ? [mk(true), mk(false)] : [mk(false), mk(true)];
 };
 
 const subV = (to: PChord): PChord => makeChord(simplifyRoot(T(to.root, m2)), '7');

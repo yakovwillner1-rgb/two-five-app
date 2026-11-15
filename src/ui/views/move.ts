@@ -1,40 +1,105 @@
+import { beat, playSources, type PlayEvent } from '../../audio/player';
+import { FEEL_LABELS, GENRES, GENRE_IDS } from '../../data/styles';
+import { FEELS } from '../../data/techniques';
 import { S, curChords, curKey, curTitle } from '../../state';
-import { approach, homePcs } from '../../theory/home';
-import { fmt, pcOf } from '../../theory/notes';
+import { chordInfo } from '../../theory/chords';
+import { fmt } from '../../theory/notes';
+import type { Ranked } from '../../theory/passing/rank';
+import type { Suggestion } from '../../theory/passing/types';
+import { famOfKind, romanNumeral, type PChord } from '../../theory/symbols';
+import type { Chord, HomeChord } from '../../theory/types';
+import { chordKeys, esc, findWay, pickChord, playTones, rankedWays, wayButton, wayKey } from '../passing';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
-export function viewMove(): string {
+/* Move: get from one chord to another. Every passing technique is a "way"; the 2-5 is one of them. */
+interface MoveModel { H: HomeChord[]; from: PChord; to: PChord; badFrom: boolean; badTo: boolean; shown: Ranked[]; hidden: Ranked[]; list: Suggestion[]; sel: Suggestion | null }
+export function moveModel(): MoveModel {
   const H = curChords();
   if (!H[S.to].landable) S.to = H.findIndex(c => c.landable && c.degree !== S.from);
-  const from = H[S.from], to = H[S.to], ap = approach(to, S.flavor)!, rn = to.rn;
-  cache.chords = { mf: from, m2: ap.ii, m5: ap.V, mt: to };
-  const home = homePcs(curKey());
-  const out = [...new Set([...ap.ii.tones, ...ap.V.tones].filter(n => !home.has(pcOf(n))).map(fmt))];
-  const lines: string[] = [];
-  lines.push(`To land on <b>${to.symbol}</b>, borrow chords 2 and 5 from the <b>${ap.chart}</b> chart: <b>${ap.ii.symbol} → ${ap.V.symbol}</b>. Written as ii/${rn} and V/${rn}.`);
-  if (S.to === 0 && ((S.mode === 'major' && ap.source === 'major') || (S.mode === 'minor' && ap.source === 'harmonic'))) lines.push(`This target is home, so it's the key's own 2‑5‑1 and nothing is borrowed.`);
-  else lines.push(out.length ? `Notes from outside ${curTitle()}: <b>${out.join(', ')}</b>. Those borrowed notes are what make the change sound like a move.` : `Every note is already in ${curTitle()}, so the move sounds smooth and inside the key.`);
-  if (pcOf(ap.V.tones[0]) === pcOf(from.tones[0]) && S.from !== S.to) lines.push(`Shortcut: ${ap.V.symbol} has the same root as ${from.symbol}. Change ${from.symbol} into ${ap.V.symbol} and you're already on the V.`);
-  if (pcOf(ap.ii.tones[0]) === pcOf(from.tones[0]) && S.from !== S.to) lines.push(`You start on the root of the ii already, so the ii can be a small change to the chord you're on.`);
-  lines.push(`Why it pulls: in ${ap.V.symbol}, the ${fmt(ap.V.tones[1])} rises a half step to ${fmt(to.tones[0])}, and the ${fmt(ap.V.tones[3])} falls a step to ${fmt(to.tones[1])}, the 3rd of ${to.symbol}.`);
-  const seq = [from, ap.ii, ap.V, to], cls = ['r0', 'r2', 'r5', 'r1'];
-  const gl = (lab: string, idx: number) => `<div><span class="tag">${lab}</span>${seq.map((c, i) => `<span class="n ct ${cls[i]}">${fmt(c.tones[idx])}</span>${i < 3 ? '<span class="arr">→</span>' : ''}`).join('')}</div>`;
-  const tip = S.tipDone ? '' : `<div class="tip"><p><b>How it works:</b> pick the chord you want to land on. The 2‑5 that leads there appears below. Press play or the space bar. Hover a chord on a Mac, or press and hold it on iPad, for a voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
+  const f = pickChord(S.fromSym, S.from), t = pickChord(S.toSym, S.to);
+  const { shown, hidden } = rankedWays(f.chord, t.chord);
+  const list = (S.pshowAll ? [...shown, ...hidden] : shown).map(r => r.suggestion);
+  /* keep the chosen way when it still exists for this pair (also when hidden), else the best one */
+  const sel = findWay(f.chord, t.chord, S.way) ?? list[0] ?? null;
+  return { H, from: f.chord, to: t.chord, badFrom: f.bad, badTo: t.bad, shown, hidden, list, sel };
+}
+/** Play button: FROM (4 beats) → each passing chord (2 beats) → TO (4 beats). */
+playSources.move = (): PlayEvent[] => {
+  const m = moveModel(), b = beat(), ev: PlayEvent[] = [];
+  let t = 0;
+  const add = (c: PChord, beats: number, id: string) => { ev.push({ t, dur: beats * b, tones: playTones(c), id }); t += beats * b; };
+  if (!m.sel?.replacesFrom) add(m.from, 4, 'mf');
+  (m.sel?.chords ?? []).forEach((c, j) => add(c, 2, 'm' + j));
+  add(m.to, 4, 'mt');
+  return ev;
+};
+
+/** The chart chord behind a 2-5 chord, so its card can show the scale to play and the voicings. */
+function chartOf(m: MoveModel, j: number): Chord | null {
+  const s = m.sel;
+  if (!s || s.techniqueId !== 'secIIV') return null;
+  const source = s.variant === 'dark' ? 'harmonic' : famOfKind(m.to) === 'min' ? 'melodic' : 'major';
+  const c = chordInfo(m.to.root, source, s.chords.length === 2 ? (j === 0 ? 1 : 4) : 4);
+  return c.symbol === s.chords[j].symbol ? c : null;
+}
+function detail(c: PChord, cls: string, top: string, id: string, chart: Chord | null): string {
+  cache.chords[id] = { tones: playTones(c) };
+  if (chart) return card(chart, cls, top, id);
+  return `<article class="card ${cls}"><div class="ch"><span class="cs">${c.symbol}</span><span class="cn">${top}</span></div>
+    <div><div class="lbl">Chord tones</div><div class="notes">${c.tones.map((n, i) => `<span class="nw"><span class="n ct">${fmt(n)}</span><small>${c.labels[i]}</small></span>`).join('')}</div></div>
+    ${chordKeys(c)}
+    ${c.upper ? `<div class="small">${fmt(c.upper.root)} major triad on top of the ${fmt(c.root)}7 shell.</div>` : ''}
+    <div class="btns"><button class="hear" data-a="one" data-id="${id}">▶ Hear ${c.symbol}</button></div></article>`;
+}
+/** A guide-tone line across the chords: the 3rd (or 4th on a sus chord), or the 7th (or 6th). */
+function line(lab: string, seq: PChord[], cls: string[], want: string[]): string {
+  return `<div><span class="tag">${lab}</span>${seq.map((c, i) => {
+    const k = c.labels.findIndex(l => want.includes(l));
+    return `<span class="n ${k < 0 ? '' : 'ct'} ${cls[i]}">${k < 0 ? '–' : fmt(c.tones[k])}</span>${i < seq.length - 1 ? '<span class="arr">→</span>' : ''}`;
+  }).join('')}</div>`;
+}
+
+export function viewMove(): string {
+  const m = moveModel(), key = curKey(), s = m.sel, g = GENRES[S.pgenre];
+  cache.chords = {};
+  const input = (which: 'from' | 'to', val: string | null, bad: boolean) => `<div class="psymrow"><input class="psym${bad ? ' bad' : ''}" data-f="${which}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type any chord: Ebmaj7, F#m7b5, C/G" value="${esc(val || '')}" aria-label="Type the ${which === 'from' ? 'start' : 'landing'} chord">${val ? `<button class="pill sm" data-a="symx" data-f="${which}">Clear</button>` : ''}${bad ? '<span class="small" style="color:var(--c5)">Can\'t read that chord. Using the picked one.</span>' : ''}</div>`;
+  const tip = S.tipDone ? '' : `<div class="tip"><p><b>How it works:</b> pick the chord you start on and the chord you want to land on. Every way to get there is listed below; the 2‑5 is one of them. Pick a way, then press play or the space bar. Hover a chord on a Mac, or press and hold it on iPad, for a voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
+  const ways = m.list.map((x, i) => wayButton(x, `data-a="way" data-k="${wayKey(x)}"`, !!s && wayKey(x) === wayKey(s), i >= m.shown.length)).join('');
+  const hiddenNote = m.hidden.length ? `<p class="hint">${S.pshowAll ? 'Showing' : 'Hiding'} ${m.hidden.length} way${m.hidden.length === 1 ? '' : 's'} that ${g.label} rarely uses or that ${m.hidden.length === 1 ? 'is' : 'are'} above its tension limit. <button class="linkbtn" data-a="pshow">${S.pshowAll ? 'Hide them' : 'Show them'}</button></p>` : '';
+  const chords = s ? s.chords : [], showFrom = !s?.replacesFrom;
+  const seq = [...(showFrom ? [m.from] : []), ...chords, m.to];
+  const cls = [...(showFrom ? ['r0'] : []), ...chords.map((_c, j) => (j === chords.length - 1 ? 'r5' : 'r2')), 'r1'];
+  const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string) => `<div class="blk ${cl}" data-ev="${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bt">${top}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div></div>`;
+  const fromRef = S.fromSym && !m.badFrom ? undefined : cref(m.H[S.from]), toRef = S.toSym && !m.badTo ? undefined : cref(m.H[S.to]);
+  const path = [
+    ...(showFrom ? [blk(m.from, 'r0', 'mf', romanNumeral(m.from, key) + ' · start', 'start chord', fromRef)] : []),
+    ...chords.map((c, j) => { const ch = chartOf(m, j); return blk(c, cls[(showFrom ? 1 : 0) + j], 'm' + j, s!.romanNumerals[j], s!.name.toLowerCase(), ch ? cref(ch) : undefined); }),
+    blk(m.to, 'r1', 'mt', romanNumeral(m.to, key) + ' · land', 'target', toRef),
+  ].join('<div class="ar">→</div>');
+  const cards = [
+    ...chords.map((c, j) => detail(c, cls[(showFrom ? 1 : 0) + j], s!.romanNumerals[j], 'm' + j, chartOf(m, j))),
+    detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', S.toSym && !m.badTo ? null : m.H[S.to]),
+  ].join('');
+  cache.chords.mf = { tones: playTones(m.from) };
+  /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
+  const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
+  const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('') : '';
   return `<div class="stack">${tip}
-   <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2>Get from <em>${from.symbol}</em> to <em>${to.symbol}</em></h2></div>
+   <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2>Get from <em>${m.from.symbol}</em> to <em>${m.to.symbol}</em></h2></div>
    <div class="panel pick">
-     <span class="lab">Start on</span>${tilesHTML(H, S.from, 'from', 'r0', true)}
-     <span class="lab">Land on</span>${tilesHTML(H, S.to, 'to', 'r1')}
+     <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}</div>
+     <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}</div>
    </div>
-   <div class="path">
-     <div class="blk r0" data-ev="mf" data-chord="${cref(from)}"><div class="bt">${from.rn} · start</div><div class="bs">${from.symbol}</div><div class="bn">home chord</div></div><div class="ar">→</div>
-     <div class="blk r2" data-ev="m2" data-chord="${cref(ap.ii)}"><div class="bt">ii / ${rn}</div><div class="bs">${ap.ii.symbol}</div><div class="bn">${ap.chart} chart · chord 2</div></div><div class="ar">→</div>
-     <div class="blk r5" data-ev="m5" data-chord="${cref(ap.V)}"><div class="bt">V / ${rn}</div><div class="bs">${ap.V.symbol}</div><div class="bn">${ap.chart} chart · chord 5</div></div><div class="ar">→</div>
-     <div class="blk r1" data-ev="mt" data-chord="${cref(to)}"><div class="bt">${rn} · land</div><div class="bs">${to.symbol}</div><div class="bn">target</div></div>
+   <div class="pathx">${path}</div>
+   <div class="panel wayspanel">
+     <div class="waysh"><h3 style="margin:0">Ways to get there</h3><span class="small">${m.shown.length} for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()} first. Tap one to use it.</span></div>
+     <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
+     <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
+     <div class="ways">${ways || '<div class="empty">No passing chords for this pair in this style. Try another genre or target.</div>'}</div>${hiddenNote}
    </div>
-   <div class="duo"><div class="panel why"><h3>What's happening</h3>${lines.map(l => `<p>${l}</p>`).join('')}</div>
+   ${s ? `<div class="duo"><div class="panel why"><h3>What's happening · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}</h3>${why}</div>
    <div class="panel"><h3>Voice‑leading lines</h3><p class="small" style="margin:0">The 3rds and 7ths move by small steps. Hum these and you hear the whole move.</p>
-     <div class="lines">${gl('3rds', 1)}${gl('7ths', 3)}</div></div></div>
-   <div class="cards">${card(ap.ii, 'r2', 'ii / ' + rn, 'm2')}${card(ap.V, 'r5', 'V / ' + rn, 'm5')}${card(to, 'r1', rn + ' · target', 'mt')}</div>
+     <div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div></div></div>` : ''}
+   <div class="cards">${cards}</div>
    </div>`;
 }

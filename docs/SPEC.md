@@ -33,10 +33,15 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
 ## 0. Existing features (must keep working)
 
 - **Home key** picker: circle-of-fifths popover, ‹ › arrows, swipe, Major/Minor keys.
-- **Move**: start chord → land chord; shows ii/x → V/x with chart source, why-it-works text,
-  voice-leading lines (3rds/7ths), cards with chord tones, keyboard, scale to play (links to Modes).
-- **2-5 color**: Auto / Bright (m7→7, from Major or Melodic Minor chart) / Dark (m7♭5→7, Harmonic Minor).
-- **Progression** builder with presets, per-chord "+ 2-5" toggle, playback with highlight, loop.
+- **Move** (Move and Passing are one tab since Ralph's request): start chord → land chord, from the
+  key or typed. Lists every way to get there (the passing-chord engine), ranked by genre and feel;
+  the 2-5 is one of the ways, bright and dark. The chosen way shows the path, why-it-works text,
+  voice-leading lines (3rds/7ths), cards with chord tones and keyboard, and for 2-5 chords the scale
+  to play (links to Modes).
+- **2-5 color**: Bright (m7→7, Major or Melodic Minor chart) and Dark (m7♭5→7, Harmonic Minor) are
+  two ways on the Move tab. The Auto/Bright/Dark switch remains on Cheat sheet and Drill.
+- **Progression**: a chain of chords (from the key or typed) with presets. Between each chord and
+  the next you choose which passing to use, or none. Playback with highlight, loop.
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.
