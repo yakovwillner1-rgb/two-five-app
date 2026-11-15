@@ -71,3 +71,14 @@ Numbers and labels (tunable data, not theory)
     sitting between two chords). It is on the Move tab.
 28. **New chords in a progression start with no passing**; you add one with "+ passing". Presets
     still load with a 2-5 into every chord.
+
+## From the Extensions research (see docs/THEORY_SOURCES.md)
+29. **13 on a Dorian m7 (e.g. B on Dm7):** books disagree. Shown as available with a "use with care"
+    note, and Dm6 is offered. Prefer it hidden on ii chords (the Berklee view)?
+30. **V7 of ii (A7 → Dm7):** the app offers ♭9 ♭13 first (Phrygian dominant) and lists Berklee's
+    natural 9 + ♭13 (Mixolydian ♭13) as an alternative. Swap the order?
+31. **Where ♯9, ♯11, ♭13 and 13 resolve:** no source fixes one answer, so the app computes the nearest
+    note of the next chord (common tone first, then half step). If you were taught specific
+    resolutions (e.g. ♯9 → ♭9 → 5), tell me and I will make them rules with tests.
+32. **Extensions are for listening so far:** tapping an extended chord plays it into the next chord,
+    but does not replace the chord in the Move path or in a progression. Want "use this one"?

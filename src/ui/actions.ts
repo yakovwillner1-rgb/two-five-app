@@ -18,7 +18,7 @@ import { viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
 
 /* Tabs where swiping / arrow keys change the key. */
-const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes'];
+const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes', 'ext'];
 
 function step(n: number): void {
   if (rootCtx()) S.mroot = mod(modeRootPc() + n, 12); else S.pc = mod(S.pc + n, 12);
@@ -92,6 +92,8 @@ function onClick(e: MouseEvent): void {
       stopAll(); render(); break;
     }
     case 'pnone': S.prog.forEach(p => { p.via = null; }); stopAll(); render(); break;
+    case 'seq': { const sq = cache.seqs[d.id!]; if (sq) { let t = 0; playSeq(sq.map((tones, i) => { const dur = (i === sq.length - 1 ? 2.4 : 1.4); const e = { t, dur, tones }; t += dur; return e; }), 'x'); } break; }
+    case 'extscale': { const sc = cache.scales[d.id!]; if (sc) playScale(sc); break; }
     case 'qshow': S.quiz!.rev = true; render(); break;
     case 'qhear': playChords(cache.qz, ['qa0', 'qa1', 'qa2']); break;
     case 'qok': case 'qno': S.score.t++; if (a === 'qok') S.score.r++; stopAll(); newQ(); render(); break;
