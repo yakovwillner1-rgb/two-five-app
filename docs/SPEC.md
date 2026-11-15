@@ -42,6 +42,8 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   two ways on the Move tab. The Auto/Bright/Dark switch remains on Cheat sheet and Drill.
 - **Progression**: a chain of chords (from the key or typed) with presets. Between each chord and
   the next you choose which passing to use, or none. Playback with highlight, loop.
+  Each chord can take an extension ("+ extension": 9, 11, 13 … from the scales that fit); the passing
+  chords on both sides pick up extensions that connect to it, as on Move.
 - **Extensions** (reference page + a panel on Move): each chord's scale with chord tones, available
   tensions and avoid notes; extended chords that fit; how each tension moves into the next chord; what
   each chord type leads to. Rules and sources: `docs/THEORY_SOURCES.md`.

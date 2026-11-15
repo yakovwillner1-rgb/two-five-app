@@ -15,7 +15,7 @@ import { findWay, progChord } from './passing';
 import { hidePop, pickerJustClosed, showPicker, showPop, showSheet } from './popover';
 import { render, setDir } from './render';
 import { listenAction } from './views/listen';
-import { viaPickerHTML } from './views/prog';
+import { extPickerHTML, viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
 
 /* Tabs where swiping / arrow keys change the key. */
@@ -87,6 +87,8 @@ function onClick(e: MouseEvent): void {
     case 'pfeel': S.pfeel = d.v as Feel; stopAll(); render(); break;
     case 'pshow': S.pshowAll = !S.pshowAll; stopAll(); render(); break;
     case 'via': stopAll(); showSheet(viaPickerHTML(+d.i!)); break;
+    case 'pext': stopAll(); showSheet(extPickerHTML(+d.i!)); break;
+    case 'pextset': { const p = S.prog[+d.i!]; if (d.k) p.ext = d.k as KindId; else delete p.ext; hidePop(); stopAll(); render(); break; }
     case 'viaset': S.prog[+d.i!].via = d.k || null; stopAll(); render(); break;
     case 'pall25': {
       const has = (i: number) => i > 0 && !!findWay(progChord(S.prog[i - 1]), progChord(S.prog[i]), 'secIIV');

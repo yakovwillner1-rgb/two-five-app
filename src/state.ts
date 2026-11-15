@@ -8,9 +8,9 @@ import type { KindId } from './theory/symbols';
 export type Tab = 'move' | 'prog' | 'listen' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
 /**
  * One chord of the progression: a degree of the home key, or a typed symbol. `via` is the passing used
- * to get here from the chord before: "techniqueId.variant", or just "secIIV" (= its first variant), or null.
+ * to get here from the chord before (its passing chords pick up extensions that connect to `ext`): "techniqueId.variant", or just "secIIV" (= its first variant), or null.
  */
-export interface ProgChord { d: number; sym?: string; via: string | null }
+export interface ProgChord { d: number; sym?: string; /** picked extension: the chord type that replaces the plain one (e.g. 'maj9') */ ext?: KindId; via: string | null }
 export interface State {
   mode: HomeMode; pc: number; tab: Tab; from: number; to: number; flavor: Flavor; tempo: number; loop: boolean;
   /** '' when silent, else what is playing: 'move' | 'prog' | 'scale' | 'x' */

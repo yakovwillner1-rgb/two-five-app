@@ -4,8 +4,10 @@ import { FEELS } from '../../data/techniques';
 import { S, curChords, curKey, curTitle } from '../../state';
 import { HOME } from '../../theory/home';
 import type { Suggestion } from '../../theory/passing/types';
+import { fmt } from '../../theory/notes';
 import { romanNumeral, type PChord } from '../../theory/symbols';
-import { esc, findWay, playTones, progChord, rankedWays, wayButton, wayKey } from '../passing';
+import { chordTensions, plainOf } from '../../theory/tensions';
+import { esc, extChoices, findWay, playTones, progBase, progChord, rankedWays, wayButton, wayKey } from '../passing';
 import { cache, tilesHTML } from '../pieces';
 
 /* Progression: a chain of chords. Between each chord and the next you choose which passing to use. */
@@ -44,6 +46,20 @@ export function viaPickerHTML(i: number): string {
     ${w.shown.map(s => btn(s, false)).join('')}${w.hidden.map(s => btn(s, true)).join('')}</div>`;
 }
 
+/** The versions of chord i the extension picker offers (plain first). The scales depend on the chord after it. */
+export function progExtChoices(i: number): PChord[] {
+  const next = i < S.prog.length - 1 ? plainOf(progChord(S.prog[i + 1])) : null;
+  return extChoices(progBase(S.prog[i]), next);
+}
+/** The list shown when choosing the extension on chord i. */
+export function extPickerHTML(i: number): string {
+  const cur = progChord(S.prog[i]), list = progExtChoices(i), next = i < S.prog.length - 1 ? progChord(S.prog[i + 1]) : null;
+  const adds = (c: PChord): string => { const t = chordTensions(c); return t.length ? 'adds ' + t.map(x => `${fmt(x.note)} (${x.label})`).join(', ') : 'no extension'; };
+  return `<div class="vh"><span class="vs" style="font-size:1.5rem">${list[0].symbol}</span><span class="small">Which extension? ${next ? `From the scales that fit on the way to ${next.symbol}.` : 'From the scales that fit this chord.'}</span><button class="vx" data-a="vclose" aria-label="Close">×</button></div>
+    <div class="ways">${list.map((c, j) => `<button class="way" data-a="pextset" data-i="${i}" data-k="${j === 0 ? '' : esc(c.kind)}" aria-pressed="${c.kind === cur.kind}"><span class="wn">${c.symbol}</span><span class="wc">${adds(c)}</span></button>`).join('')}</div>
+    <p class="small" style="margin:12px 0 0">The passing chords on both sides pick up extensions that connect to this one.</p>`;
+}
+
 export function viewProg(): string {
   const H = curChords(), M = HOME[S.mode], key = curKey(), steps = progSteps();
   cache.chords = {};
@@ -58,7 +74,7 @@ export function viewProg(): string {
     }
     const id = `p${i}c`;
     cache.chords[id] = { tones: playTones(st.chord) };
-    bars += `<div class="bar tg ${st.via ? 'r1' : 'r0'}" data-ev="${id}"><button class="tgb" data-a="one" data-id="${id}" aria-label="Play ${st.chord.symbol}"><span>${st.chord.symbol}</span><small>${romanNumeral(st.chord, key)}</small></button><button class="x" data-a="pdel" data-i="${i}" aria-label="Remove ${st.chord.symbol}">×</button></div>`;
+    bars += `<div class="bar tg ${st.via ? 'r1' : 'r0'}" data-ev="${id}"><button class="tgb" data-a="one" data-id="${id}" aria-label="Play ${st.chord.symbol}"><span>${st.chord.symbol}</span><small>${romanNumeral(st.chord, key)}</small></button>${progExtChoices(i).length > 1 ? `<button class="tog${S.prog[i].ext ? ' on' : ''}" data-a="pext" data-i="${i}" aria-label="Choose an extension for ${st.chord.symbol}">${S.prog[i].ext ? 'extension ▾' : '+ extension'}</button>` : ''}<button class="x" data-a="pdel" data-i="${i}" aria-label="Remove ${st.chord.symbol}">×</button></div>`;
   });
   const can25 = (i: number) => i > 0 && !!findWay(steps[i - 1].chord, steps[i].chord, 'secIIV');
   const allOn = steps.some((_st, i) => can25(i)) && steps.every((st, i) => !can25(i) || st.via?.techniqueId === 'secIIV');
@@ -76,6 +92,6 @@ export function viewProg(): string {
    </div>
    <div class="panel"><div class="lbl">Add a chord</div>${tilesHTML(H, -1, 'padd', 'r1')}
      <div class="psymrow"><input class="psym" data-f="prog" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type any chord and press Enter: Ebmaj7, F#m7b5, C/G" aria-label="Type a chord to add">${bad ? `<span class="small" style="color:var(--c5)">Can't read "${esc(bad)}".</span>` : ''}</div>
-     <p class="small" style="margin:12px 0 0">Tap a chord to hear it. Tap <b>+ passing</b> between two chords to choose how to get from one to the next. Each passing chord takes two beats.</p></div>
+     <p class="small" style="margin:12px 0 0">Tap a chord to hear it. Tap <b>+ extension</b> under a chord to add a 9, 11 or 13. Tap <b>+ passing</b> between two chords to choose how to get from one to the next: the passing chords pick up extensions that connect to yours. Each passing chord takes two beats.</p></div>
   </div>`;
 }
