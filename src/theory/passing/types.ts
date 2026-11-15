@@ -32,6 +32,16 @@ export type Technique = (from: PChord, to: PChord, key: Key, ctx: PassCtx) => Dr
 /** One note moving from the last passing chord into TO. */
 export interface VoiceMove { from: Note; to: Note; fromChord: string; toChord: string; /** signed semitones; 0 = common tone */ semis: number }
 
+/** How a way was fitted to the extensions on FROM and TO. */
+export interface ExtInfo {
+  /** 0–1: how smoothly the picked extensions carry through the way; null when there was nothing to measure */
+  fit: number | null;
+  /** score factor for ranking (1 = neutral) */
+  factor: number;
+  /** where each picked extension goes, and which passing chords were extended and why */
+  lines: string[];
+}
+
 export interface Suggestion {
   techniqueId: TechniqueId;
   name: string;
@@ -48,4 +58,6 @@ export interface Suggestion {
   /** at most 4 short bullets: function, voice leading, borrowed notes, why it pulls */
   explanation: string[];
   replacesFrom?: boolean;
+  /** set when FROM or TO carries extensions */
+  ext?: ExtInfo;
 }
