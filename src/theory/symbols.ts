@@ -31,6 +31,7 @@ export const KINDS = {
   'm7': { fam: 'min', ivs: [m3, P5, m7], aliases: ['min7', '-7'] },
   'm9': { fam: 'min', ivs: [m3, P5, m7, M2], aliases: ['min9', '-9'] },
   'm11': { fam: 'min', ivs: [m3, P5, m7, M2, P4], aliases: ['min11', '-11'] },
+  'm7add11': { fam: 'min', ivs: [m3, P5, m7, P4], aliases: ['m7(11)', 'm7sus'] },
   'm(maj7)': { fam: 'min', ivs: [m3, P5, M7], aliases: ['mmaj7', 'mM7', 'minmaj7', '-Δ', 'mΔ', 'm(M7)'] },
   'm7♭5': { fam: 'hdim', ivs: [m3, d5, m7], aliases: ['ø', 'ø7', 'min7b5', '-7b5'] },
   '°7': { fam: 'dim', ivs: [m3, d5, d7], aliases: ['dim7', 'o7'] },
@@ -43,6 +44,9 @@ export const KINDS = {
   '7♯9': { fam: 'dom', ivs: [M3, P5, m7, A2] },
   '7♯11': { fam: 'dom', ivs: [M3, P5, m7, A4] },
   '7♭13': { fam: 'dom', ivs: [M3, P5, m7, m6] },
+  '7♭9♭13': { fam: 'dom', ivs: [M3, P5, m7, m2, m6] },
+  '9♯11': { fam: 'dom', ivs: [M3, P5, m7, M2, A4] },
+  '9♭13': { fam: 'dom', ivs: [M3, P5, m7, M2, m6] },
   '13♯11': { fam: 'dom', ivs: [M3, m7, M2, A4, M6] },
   '13♭9': { fam: 'dom', ivs: [M3, m7, m2, M6] },
   '7♯9♭13': { fam: 'dom', ivs: [M3, m7, A2, m6] },
@@ -137,7 +141,7 @@ export function degreeNumeral(n: Note, key: Key, lower: boolean): string {
   return (a < 0 ? '♭'.repeat(-a) : '♯'.repeat(a)) + num;
 }
 const lowerFam = (c: PChord): boolean => ['min', 'hdim', 'dim'].includes(famOfKind(c));
-const RN_SUFFIX: Partial<Record<KindId, string>> = { 'm': '', 'm7': '7', 'm9': '9', 'm11': '11', 'm6': '6', 'm(maj7)': '(maj7)', 'm7♭5': 'ø7' };
+const RN_SUFFIX: Partial<Record<KindId, string>> = { 'm': '', 'm7': '7', 'm9': '9', 'm11': '11', 'm7add11': '7add11', 'm6': '6', 'm(maj7)': '(maj7)', 'm7♭5': 'ø7' };
 /** Roman numeral of a chord in a key: "ii7", "V7", "♭VImaj7", "♯iv°7", "I/3". */
 export function romanNumeral(c: PChord, key: Key): string {
   const suffix = RN_SUFFIX[c.kind] ?? c.kind;
