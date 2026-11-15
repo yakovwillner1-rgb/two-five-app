@@ -44,6 +44,7 @@ Could not open (blocked): the Open Music Theory chapter on chord-scale theory.
 | 13 | In ii–V–I the 9 of the ii is the 13 of the V (common tone), and the 13 of the V is the 3rd of the I. | Sourced: rootless voicing tables (Dm9 → G13 → Cmaj9). |
 | 14 | Where every other tension goes (♯9, ♯11, ♭13 …). | **Computed**, not sourced: keep a common tone if the next chord has it (as a chord tone or an available tension), else move a half step to a chord tone, else a whole step. I found no source that fixes one resolution per tension. |
 | 15 | "Leads to" (ii → V up a fourth, V → I down a fifth, tritone sub down a half step, backdoor ♭VII7 up a whole step, leading-tone °7 up a half step, common-tone °7 same root). | Standard functional harmony; already in SPEC §1.1. |
+| 16 | **Extensions inside a move.** When the start or landing chord has extensions, each plain passing 7th chord takes an extended version from the scales of rule 9 (first scale preferred), and each way is scored by how the picked extensions connect: common tone 1, half step 0.75, whole step 0.5, leap 0. The 3rd and 7th of a dominant are not counted as free voices (rule 12). | The scales and the Dm9 → G13 → Cmaj9 case are sourced (rules 9, 13). The order common tone > half step > whole step is rule 14. The **numbers** (0.75, 0.5, the 0.25 scale preference, score × (0.5 + fit)) are my tuning, not from a source. |
 
 ## Known limits
 - Chord-scale theory is a teaching system, not a law. Wikipedia lists the usual criticisms (it is

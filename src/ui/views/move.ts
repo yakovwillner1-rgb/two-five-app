@@ -6,24 +6,27 @@ import { chordInfo } from '../../theory/chords';
 import { fmt } from '../../theory/notes';
 import type { Ranked } from '../../theory/passing/rank';
 import type { Suggestion } from '../../theory/passing/types';
-import { famOfKind, romanNumeral, type PChord } from '../../theory/symbols';
+import { famOfKind, fromChart, romanNumeral, type PChord } from '../../theory/symbols';
 import type { Chord, HomeChord } from '../../theory/types';
 import { extensionOptions, scaleChoices } from '../../theory/tensions';
 import { optionChip, scaleChips, tensionLine } from '../extensions';
-import { chordKeys, esc, findWay, pickChord, playTones, rankedWays, wayButton, wayKey } from '../passing';
+import { chordKeys, esc, extChoices, findWay, pickChord, playTones, rankedWays, wayButton, wayKey, withExt } from '../passing';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
 /* Move: get from one chord to another. Every passing technique is a "way"; the 2-5 is one of them. */
-interface MoveModel { H: HomeChord[]; from: PChord; to: PChord; badFrom: boolean; badTo: boolean; shown: Ranked[]; hidden: Ranked[]; list: Suggestion[]; sel: Suggestion | null }
+interface MoveModel { H: HomeChord[]; from: PChord; to: PChord; fromChoices: PChord[]; toChoices: PChord[]; badFrom: boolean; badTo: boolean; shown: Ranked[]; hidden: Ranked[]; list: Suggestion[]; sel: Suggestion | null }
 export function moveModel(): MoveModel {
   const H = curChords();
   if (!H[S.to].landable) S.to = H.findIndex(c => c.landable && c.degree !== S.from);
   const f = pickChord(S.fromSym, S.from), t = pickChord(S.toSym, S.to);
+  /* the picked extensions are part of the chords, so every way below is fitted to them */
+  const toChoices = extChoices(t.chord, null), fromChoices = extChoices(f.chord, t.chord);
+  f.chord = withExt(f.chord, S.fromExt, t.chord); t.chord = withExt(t.chord, S.toExt, null);
   const { shown, hidden } = rankedWays(f.chord, t.chord);
   const list = (S.pshowAll ? [...shown, ...hidden] : shown).map(r => r.suggestion);
   /* keep the chosen way when it still exists for this pair (also when hidden), else the best one */
   const sel = findWay(f.chord, t.chord, S.way) ?? list[0] ?? null;
-  return { H, from: f.chord, to: t.chord, badFrom: f.bad, badTo: t.bad, shown, hidden, list, sel };
+  return { H, from: f.chord, to: t.chord, fromChoices, toChoices, badFrom: f.bad, badTo: t.bad, shown, hidden, list, sel };
 }
 /** Play button: FROM (4 beats) → each passing chord (2 beats) → TO (4 beats). */
 playSources.move = (): PlayEvent[] => {
@@ -65,14 +68,18 @@ export function viewMove(): string {
   const m = moveModel(), key = curKey(), s = m.sel, g = GENRES[S.pgenre];
   cache.chords = {};
   const input = (which: 'from' | 'to', val: string | null, bad: boolean) => `<div class="psymrow"><input class="psym${bad ? ' bad' : ''}" data-f="${which}" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type any chord: Ebmaj7, F#m7b5, C/G" value="${esc(val || '')}" aria-label="Type the ${which === 'from' ? 'start' : 'landing'} chord">${val ? `<button class="pill sm" data-a="symx" data-f="${which}">Clear</button>` : ''}${bad ? '<span class="small" style="color:var(--c5)">Can\'t read that chord. Using the picked one.</span>' : ''}</div>`;
-  const tip = S.tipDone ? '' : `<div class="tip"><p><b>How it works:</b> pick the chord you start on and the chord you want to land on. Every way to get there is listed below; the 2‑5 is one of them. Pick a way, then press play or the space bar. Hover a chord on a Mac, or press and hold it on iPad, for a voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
+  const extRow = (which: 'from' | 'to', list: PChord[], cur: PChord) => (list.length < 2 ? '' : `<div class="extpick"><span class="lbl">Extensions</span><div class="seg wrap" role="group" aria-label="Extensions on the ${which === 'from' ? 'start' : 'landing'} chord">${list.map(c => `<button data-a="ext" data-f="${which}" data-k="${esc(c.kind)}" aria-pressed="${c.kind === cur.kind}">${c.symbol}</button>`).join('')}</div></div>`);
+  /* the chart chord (for the voicing popover and the scale card) only while the chord is not extended */
+  const chartFrom = (!S.fromSym || m.badFrom) && fromChart(m.H[S.from]).symbol === m.from.symbol ? m.H[S.from] : null;
+  const chartTo = (!S.toSym || m.badTo) && fromChart(m.H[S.to]).symbol === m.to.symbol ? m.H[S.to] : null;
+  const tip = S.tipDone ? '' : `<div class="tip"><p><b>How it works:</b> pick the chord you start on and the chord you want to land on. Every way to get there is listed below; the 2‑5 is one of them. Add an extension (9, 11, 13 …) to either chord and the ways adapt. Pick a way, then press play or the space bar. Hover a chord on a Mac, or press and hold it on iPad, for a voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
   const ways = m.list.map((x, i) => wayButton(x, `data-a="way" data-k="${wayKey(x)}"`, !!s && wayKey(x) === wayKey(s), i >= m.shown.length)).join('');
   const hiddenNote = m.hidden.length ? `<p class="hint">${S.pshowAll ? 'Showing' : 'Hiding'} ${m.hidden.length} way${m.hidden.length === 1 ? '' : 's'} that ${g.label} rarely uses or that ${m.hidden.length === 1 ? 'is' : 'are'} above its tension limit. <button class="linkbtn" data-a="pshow">${S.pshowAll ? 'Hide them' : 'Show them'}</button></p>` : '';
   const chords = s ? s.chords : [], showFrom = !s?.replacesFrom;
   const seq = [...(showFrom ? [m.from] : []), ...chords, m.to];
   const cls = [...(showFrom ? ['r0'] : []), ...chords.map((_c, j) => (j === chords.length - 1 ? 'r5' : 'r2')), 'r1'];
   const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string) => `<div class="blk ${cl}" data-ev="${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bt">${top}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div></div>`;
-  const fromRef = S.fromSym && !m.badFrom ? undefined : cref(m.H[S.from]), toRef = S.toSym && !m.badTo ? undefined : cref(m.H[S.to]);
+  const fromRef = chartFrom ? cref(chartFrom) : undefined, toRef = chartTo ? cref(chartTo) : undefined;
   const path = [
     ...(showFrom ? [blk(m.from, 'r0', 'mf', romanNumeral(m.from, key) + ' · start', 'start chord', fromRef)] : []),
     ...chords.map((c, j) => { const ch = chartOf(m, j); return blk(c, cls[(showFrom ? 1 : 0) + j], 'm' + j, s!.romanNumerals[j], s!.name.toLowerCase(), ch ? cref(ch) : undefined); }),
@@ -80,11 +87,11 @@ export function viewMove(): string {
   ].join('<div class="ar">→</div>');
   const cards = [
     ...chords.map((c, j) => detail(c, cls[(showFrom ? 1 : 0) + j], s!.romanNumerals[j], 'm' + j, chartOf(m, j))),
-    detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', S.toSym && !m.badTo ? null : m.H[S.to]),
+    detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', chartTo),
   ].join('');
   cache.chords.mf = { tones: playTones(m.from) };
   /* each chord of the path: its scale, its tensions, and extended versions that lead into the next chord */
-  const ext = `<div class="panel"><h3>Extensions that lead on</h3><p class="small" style="margin:0 0 10px">Each chord's scale decides which extensions fit. Tap an extended chord to hear it go into the next chord. The lines under it say where each added note moves.</p>
+  const ext = `<div class="panel"><h3>Scales and other extensions</h3><p class="small" style="margin:0 0 10px">Each chord's scale decides which extensions fit. Tap an extended chord to hear it go into the next chord. The lines under it say where each added note moves.</p>
     <div class="extrows">${seq.map((c, i) => {
       const next = i < seq.length - 1 ? seq[i + 1] : null, ch = scaleChoices(c, next, key)[0], opts = extensionOptions(c, next, key);
       return `<div class="extrow ${cls[i]}"><div class="exth"><span class="cs2">${c.symbol}</span>${next ? `<span class="arr">→</span><span class="small">${next.symbol}</span>` : '<span class="small">landing chord</span>'}<span class="cn">${ch.scale.name}</span></div>
@@ -94,12 +101,15 @@ export function viewMove(): string {
     <p class="small" style="margin:10px 0 0">Rules and sources: see <button class="linkbtn" data-a="tab" data-v="ext">Extensions</button> under Reference.</p></div>`;
   /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
   const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
-  const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('') : '';
+  const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('')
+    + (s.ext?.lines.length ? `<p><span class="whyl">Extensions</span>${s.ext.lines.join('<br>')}</p>` : '') : '';
+  const extOn = !!s?.ext;
   return `<div class="stack">${tip}
    <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2>Get from <em>${m.from.symbol}</em> to <em>${m.to.symbol}</em></h2></div>
    <div class="panel pick">
-     <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}</div>
-     <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}</div>
+     <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}${extRow('from', m.fromChoices, m.from)}</div>
+     <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}${extRow('to', m.toChoices, m.to)}</div>
+     <p class="small extnote">${extOn ? 'The passing chords below took extensions that connect to yours, and the ways are re-ranked by how smoothly your added notes carry through (the “ext” mark).' : 'Pick an extension on either chord: the passing chords pick up matching extensions and the ways re-rank.'}</p>
    </div>
    <div class="pathx">${path}</div>
    <div class="panel wayspanel">

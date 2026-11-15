@@ -5,7 +5,7 @@ import { chordInfo } from '../theory/chords';
 import { HOME, approach, keyName } from '../theory/home';
 import { mod } from '../theory/notes';
 import { TYPES } from '../theory/scales';
-import { parseChord } from '../theory/symbols';
+import { parseChord, type KindId } from '../theory/symbols';
 import type { Family, Flavor, HomeMode, ScaleType } from '../theory/types';
 import type { Genre } from '../data/styles';
 import type { Feel } from '../data/techniques';
@@ -63,8 +63,8 @@ function onClick(e: MouseEvent): void {
     case 'enext': newEar(); render(); playScale(earNotes()); break;
     case 'eopen': S.mfam = S.ear!.fam; S.mdeg = S.ear!.deg; S.mroot = S.ear!.pc; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'tab': S.tab = d.v as Tab; stopAll(); render(); window.scrollTo(0, 0); break;
-    case 'from': S.from = +d.d!; S.fromSym = null; stopAll(); render(); break;
-    case 'to': S.to = +d.d!; S.toSym = null; stopAll(); render(); break;
+    case 'from': S.from = +d.d!; S.fromSym = null; S.fromExt = null; stopAll(); render(); break;
+    case 'to': S.to = +d.d!; S.toSym = null; S.toExt = null; stopAll(); render(); break;
     case 'flavor': S.flavor = d.v as Flavor; stopAll(); render(); break;
     case 'loop': S.loop = !S.loop; b.setAttribute('aria-pressed', String(S.loop)); save(); break;
     case 'tempo': S.tempo = Math.max(50, Math.min(200, S.tempo + +d.v!)); document.querySelectorAll('.tempo output').forEach(o => { o.textContent = S.tempo + ' bpm'; }); save(); break;
@@ -75,10 +75,11 @@ function onClick(e: MouseEvent): void {
     case 'padd': S.prog.push({ d: +d.d!, via: null }); S.progBad = null; stopAll(); render(); break;
     case 'pclear': S.prog = []; stopAll(); render(); break;
     case 'mapplay': { const dg = +d.d!, t = H()[dg], ap = approach(t, S.flavor)!; playChords([ap.ii, ap.V, t], ['q' + dg + 'a', 'q' + dg + 'b', 'q' + dg + 'c']); break; }
-    case 'mapopen': S.to = +d.d!; S.fromSym = null; S.toSym = null; S.way = 'secIIV'; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
+    case 'mapopen': S.to = +d.d!; S.fromSym = null; S.toSym = null; S.fromExt = null; S.toExt = null; S.way = 'secIIV'; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'chart': S.chart = d.v as ScaleType; stopAll(); render(); break;
     case 'row': { const T = TYPES[S.chart], c = chordInfo(keyName(S.pc, T.keys), S.chart, +d.d!); playSeq([{ t: 0, dur: 2.6, tones: c.tones, id: 'c' + d.d }], 'x'); break; }
-    case 'symx': if (d.f === 'from') S.fromSym = null; else S.toSym = null; stopAll(); render(); break;
+    case 'ext': if (d.f === 'from') S.fromExt = (d.k || null) as KindId | null; else S.toExt = (d.k || null) as KindId | null; stopAll(); render(); break;
+    case 'symx': if (d.f === 'from') { S.fromSym = null; S.fromExt = null; } else { S.toSym = null; S.toExt = null; } stopAll(); render(); break;
     case 'way': S.way = d.k || null; stopAll(); render(); break;
     case 'pgenre': S.pgenre = d.v as Genre; stopAll(); render(); break;
     case 'pfeel': S.pfeel = d.v as Feel; stopAll(); render(); break;
@@ -110,7 +111,7 @@ function onKey(e: KeyboardEvent): void {
   if (t.closest && t.closest('#pop')) return;
   if (e.key === 'ArrowRight' && SWIPE.includes(S.tab)) { e.preventDefault(); step(1); }
   if (e.key === 'ArrowLeft' && SWIPE.includes(S.tab)) { e.preventDefault(); step(-1); }
-  if (S.tab === 'move' && /^[1-7]$/.test(e.key)) { const dg = +e.key - 1; if (curChords()[dg].landable && (dg !== S.to || S.toSym)) { S.to = dg; S.toSym = null; stopAll(); render(); } }
+  if (S.tab === 'move' && /^[1-7]$/.test(e.key)) { const dg = +e.key - 1; if (curChords()[dg].landable && (dg !== S.to || S.toSym)) { S.to = dg; S.toSym = null; S.toExt = null; stopAll(); render(); } }
 }
 
 export function initActions(): void {
@@ -132,7 +133,7 @@ export function initActions(): void {
         if (!v) return;
         const c = parseChord(v);
         if (c) { S.prog.push({ d: 0, sym: v, via: null }); S.progBad = null; } else S.progBad = v;
-      } else if (t.dataset.f === 'from') S.fromSym = v; else S.toSym = v;
+      } else if (t.dataset.f === 'from') { S.fromSym = v; S.fromExt = null; } else { S.toSym = v; S.toExt = null; }
       stopAll(); render();
       if (t.dataset.f === 'prog') document.querySelector<HTMLInputElement>('.psym[data-f="prog"]')?.focus();
       return;

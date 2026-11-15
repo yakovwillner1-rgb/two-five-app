@@ -45,6 +45,9 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
 - **Extensions** (reference page + a panel on Move): each chord's scale with chord tones, available
   tensions and avoid notes; extended chords that fit; how each tension moves into the next chord; what
   each chord type leads to. Rules and sources: `docs/THEORY_SOURCES.md`.
+- **Extensions in the move**: on Move, pick an extension on the start and landing chord. Plain passing
+  7th chords take the extension that connects best (scale by resolution), ways are re-ranked by how
+  smoothly the picked notes carry through ("ext %"), and the why-panel says where each note goes.
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.
