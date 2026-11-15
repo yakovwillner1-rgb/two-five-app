@@ -1,0 +1,184 @@
+# 2-5 Into Anything — full spec
+
+Live: https://yakovwillner1-rgb.github.io/two-five-app/
+Today the whole app is one file, `index.html` (~100 KB, vanilla JS). Treat it as the reference
+implementation for existing behavior while porting.
+
+---------------------------------------------------------------------------------------------------
+## 0. Existing features (must keep working)
+
+- **Home key** picker: circle-of-fifths popover, ‹ › arrows, swipe, Major/Minor keys.
+- **Move**: start chord → land chord; shows ii/x → V/x with chart source, why-it-works text,
+  voice-leading lines (3rds/7ths), cards with chord tones, keyboard, scale to play (links to Modes).
+- **2-5 color**: Auto / Bright (m7→7, from Major or Melodic Minor chart) / Dark (m7♭5→7, Harmonic Minor).
+- **Progression** builder with presets, per-chord "+ 2-5" toggle, playback with highlight, loop.
+- **Cheat sheet**: every chord in the key with its 2-5.
+- **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
+  brightness ladder, formula vs major, character note, drone playback, compare with major.
+- **Charts**: the four 7-row chord/scale charts (source: Jeff Schneider's "The Last Chord/Scale
+  Chart You'll Ever Need").
+- **Drill**: 2-5 spelling flashcards + modes by ear.
+- **Play it**: Web MIDI input + on-screen multitouch piano; checks the move / progression /
+  random 2-5s / mode scale; "Any voicing" (3rd+7th required, rest must fit the scale) vs
+  "Exact voicing"; green/red keys, gold hint dots, time + wrong-note stats.
+- **Voicings**: hover (Mac) / long-press (iPad) shows one fitting voicing (Rootless A for non-dominant,
+  Rootless B for dominant) + "All voicings" sheet with 10 voicings.
+- **Sound**: built-in synth, or MIDI out to any port (IAC Driver Bus 1 → Logic + Kontakt). The app
+  never listens to the port it sends to (feedback guard). Stop sends note-offs (no stuck notes).
+- Keyboard shortcuts: Space play/stop, ←/→ key, 1–7 land on chord, Esc close popup.
+- State persisted in localStorage. PWA: manifest, icons, offline service worker.
+- Layout: sidebar ≥1000 px, bottom tab bar below; sticky player bar. Dark theme, Fraunces/Manrope.
+
+---------------------------------------------------------------------------------------------------
+## Phase 0 — Port to Vite + TypeScript (no new features)
+
+- Move theory code into `src/theory/` with types: `Note` (letter + accidental), `PitchClass`,
+  `Interval`, `Chord` (root Note, quality, tones, extensions), `Scale`/`Mode`, `Key`.
+- Port UI 1:1. Port tests for: all chords of the 4 scale types in 12 keys (spelling + quality),
+  secondary 2-5 per target, voicing builders, Play-it checking logic (simulate note on/off).
+- GitHub Actions deploy; service worker per CLAUDE.md.
+- **Done when:** live site behaves identically, `npm test` green, Lighthouse PWA installable.
+
+---------------------------------------------------------------------------------------------------
+## Phase 1 — Passing-chord engine + style system + explanations
+
+New tab **"Passing"**: pick FROM and TO chords (diatonic, or type any chord symbol). Show every
+technique that connects them, as cards ranked by the current style. Each card: chord symbols,
+roman-numeral analysis, voicing on a keyboard, play button (plays FROM → passing → TO through
+the current sound output), and the "why" text.
+
+### 1.1 Technique catalogue (each is a pure function `(from, to, key, ctx) → Suggestion[]`)
+| id | technique | rule |
+|---|---|---|
+| secDom | Secondary dominant | V7 of TO (TO must not be dim/m7♭5) |
+| secIIV | Secondary ii–V | existing logic (bright/dark by TO quality) |
+| tritone | Tritone sub | ♭II7 of TO (dominant a tritone from V/TO) |
+| iiSubV | ii–subV | related ii of the tritone sub, then subV7 |
+| backdoor | Backdoor ii–V | iv7 → ♭VII7 → TO (TO major or dominant) |
+| dimPass | Diminished passing | ♯°7 between two chords whose roots are a whole step apart (♯I°7 between I and ii, ♯IV°7 between IV and V/I⁶₄) |
+| dimCT | Common-tone °7 | °7 sharing the root of TO (e.g. C°7 → Cmaj7) |
+| chromAbove / chromBelow | Chromatic approach | same quality as TO, a half step above/below |
+| planing | Planing | slide the TO voicing shape in parallel from a step above/below |
+| lineCliche | Line cliché | one inner voice moves chromatically (m, m(maj7), m7, m6) |
+| borrowed | Modal interchange | iv, iv6, ♭VI, ♭VII, ♭II, ♭III from the parallel minor; minor plagal iv → I |
+| susSub | Sus / pedal | IV/V or V7sus4 replaces V |
+| coltrane | Coltrane cycle | major-third cycle inserted into ii–V–I |
+| upperStruct | Upper-structure dominant | triad over the dominant (II/V = 13♯11, ♭VI/V = ♯9♭13, ♭III/V etc.) |
+| turnaround | Turnaround variants | I–vi–ii–V, I–VI7–ii–V7, iii–VI7–ii–V7, Tadd Dameron (I–♭III–♭VI–♭II), gospel 7-3-6 (vii–III7–vi) |
+| gospelWalk | Gospel walk-up | I → I/3 → IV → ♯IV°7 → I/5 |
+
+Each suggestion carries: `chords[]`, `romanNumerals[]`, `techniqueId`, `tension` 0–1,
+`colorTags` (bright/dark/tense/lush/sad/dreamy), `outsideNotes[]` vs home key, and `voiceLeading`
+(from the voicing engine, see Phase 2).
+
+### 1.2 Style system (`src/data/styles.ts`, plain data, easy to tune)
+- **Genres:** jazz, gospel, neo-soul/R&B, funk, pop, lo-fi, bossa, film.
+- **Feels:** bright, dark, tense, lush, sad, dreamy.
+- A style = genre × feel. Each has: technique weights (0–1), allowed extensions, preferred voicing
+  types, max tension, harmonic rhythm (chords per bar).
+- Starting values (tune later, keep in data, not code):
+  - jazz: secIIV 1, tritone .9, iiSubV .8, backdoor .6, upperStruct .7, coltrane .3
+  - gospel: dimPass 1, gospelWalk 1, secDom .9, borrowed .8 (minor plagal), upperStruct .6
+  - neo-soul: planing 1, chromAbove .8, borrowed .7, susSub .7, extensions 9/11/13, clusters
+  - funk: chromAbove 1, planing .8, susSub .7; dominant 9/13 and m11; harmonic rhythm low
+  - pop: secDom .8, borrowed .9 (♭VI, ♭VII, iv), susSub .6; triads + add9; low tension
+  - lo-fi: maj9/m9/m11 planing .9, borrowed .7, chromBelow .6; tension low-mid
+  - bossa: secIIV .9, tritone .7, dimPass .5; 6/9, maj7, m6
+  - film: borrowed 1, coltrane .4, planing .6; maj7♯11, ♭VI, ♭II
+  - feel modifiers: bright → favor major/Lydian, raise ♮/♯ colors; dark → favor ♭9 ♭13, borrowed
+    minor, m7♭5; tense → upper structures, altered; lush → 9/11/13, spread voicings; sad → minor iv,
+    ♭VI; dreamy → planing, maj7♯11, sus.
+
+### 1.3 Explanations (rule-generated templates)
+Every suggestion explains, in ≤4 short bullets:
+- **Function** ("V of ii", "tritone sub of V/IV").
+- **Voice leading**: the exact notes that move and where ("B♭ in C7 falls to A in Fmaj7").
+- **Borrowed notes** and where from ("A♭ is borrowed from C minor").
+- **Why it pulls**: tritone resolution / half-step approach / common tone / chromatic line.
+
+### 1.4 Test cases (must pass; add many more)
+- C major, Cmaj7 → Fmaj7: secDom C7; secIIV Gm7–C7; tritone G♭7; iiSubV D♭m7–G♭7.
+- C major → Am7 (vi): secDom E7; dark secIIV Bm7♭5–E7; bright secIIV Bm7–E7.
+- Backdoor to Cmaj7: Fm7–B♭7.
+- dimPass Cmaj7 → Dm7: C♯°7 (C♯ E G B♭). Fmaj7 → C/G: F♯°7.
+- Common-tone °7 into Cmaj7: C°7 (C E♭ G♭ B𝄫).
+- Coltrane over Dm7–G7–Cmaj7: Dm7 | E♭7 A♭maj7 | B7 Emaj7 | G7 | Cmaj7.
+- Tadd Dameron in C: Cmaj7 – E♭maj7 – A♭maj7 – D♭maj7 → Cmaj7.
+- Upper structure: D triad over C7 = C13♯11 (C E B♭ + D F♯ A); E♭ triad over G7 = G7♯9♭13.
+- Spelling: tritone sub of A7 is E♭7 (not D♯7); secondary dominant of ii in G♭ major is E♭7.
+
+**Done when:** Passing tab live; all catalogue tests green; every card plays through IAC and the
+built-in synth; style switch visibly reorders/filters results.
+
+---------------------------------------------------------------------------------------------------
+## Phase 2 — Melody on top (lead voicing)
+
+Input: chord + melody note (click a key, type it, or play it on the S88). Output: ranked voicings
+with that note on top, smoothest voice leading from the previous chord.
+
+- **Voicing types:** close, drop 2, drop 3, drop 2&4, rootless A/B (Levine: A = 3-5-7-9 /
+  dominant 3-13-7-9; B = 7-9-3-5 / dominant 7-9-3-13 — note the current app voices dominant
+  Rootless B as 7-9-3-5; switch it to 7-9-3-13), block chords (Shearing locked hands:
+  4-note close + melody doubled an octave below), Barry Harris 6th-diminished (6th chord on chord
+  tones, diminished on passing tones), quartal (So What: three 4ths + major 3rd), upper structures,
+  spread (LH 1-7 or 1-10, RH 3-5-9/13), neo-soul clusters (2nds inside).
+- **Melody check:** classify melody note as chord tone / available tension / avoid note
+  (e.g. 4 over maj7, ♭9 over m7). For avoid notes, offer a fix (maj7 → maj7♯11? sus? reharm via
+  Passing engine) and explain.
+- **Voice leading:** choose the voicing that minimizes total semitone movement from the previous
+  voicing; keep common tones; report each voice's motion.
+- **Range rules:** LH not below E2 for 3rds (low-interval limits), melody stays where the user put it.
+- **Tests:** Cmaj7 with E5 on top → drop 2 = C4 G4 B4 E5. Rootless A Dm7 = F A C E; Rootless B G7 =
+  F A B E. Melody F over Cmaj7 → flagged avoid.
+
+**Done when:** Lead-voicing view works with mouse, touch and MIDI input; voice-leading line display;
+"send to Play it" to practice the voicings.
+
+---------------------------------------------------------------------------------------------------
+## Phase 3 — Reharm from a Logic MIDI file
+
+Flow: upload `.mid` (Logic: select region → File → Export → Selection as MIDI File) → analysis →
+pick style → 2–3 reharms (light / medium / wild) → A/B → explain → output.
+
+### 3.1 Parsing
+- Standard MIDI File types 0 and 1, running status, tempo map, time signatures, PPQ. Write a small
+  parser or vendor a pinned library into the repo (must work offline). Merge tracks; let the user
+  pick a melody track if there are several.
+
+### 3.2 Analysis
+- **Key:** Krumhansl–Schmuckler profile over duration-weighted pitch classes; let the user override.
+- **Grid:** bars from time signature; harmonic rhythm candidates of 1 bar, ½ bar, 1 beat.
+- **Melody:** top note of each onset cluster (skyline), or the chosen track.
+- **Chords:** per segment, duration-weighted pitch-class set (ignore melody notes when a separate
+  melody exists), lowest note as bass; score against chord templates (triads, 6, 7, 9, 11, 13,
+  sus, dim, alt) preferring the bass as root; allow rootless detection (bass from LH else infer).
+- **Show the detected chart** and let the user edit any chord before reharming.
+
+### 3.3 Reharm
+- For each chord boundary, run the Passing engine (prev → next) with the style weights; insert or
+  substitute where the melody allows (melody note must be chord tone or available tension of the
+  new chord, else reject or re-voice).
+- Levels: light (substitutions only on weak beats / long chords), medium, wild (Coltrane, upper
+  structures, planing).
+- Voice every chord with Phase 2 under the original melody.
+- **Outputs:** play live through MIDI out (record into Logic), download `.mid` (melody track +
+  reharm track, original tempo/time sig), send to Play it.
+- **Explain** every change with the Phase 1 templates, plus a one-line summary per reharm
+  ("Turned the turnaround into a tritone-sub chain; bar 7 gets a backdoor").
+
+**Done when:** a real file from Ralph round-trips: upload → detect (correctable) → reharm →
+play/export → drag into Logic → lines up with the original region.
+
+---------------------------------------------------------------------------------------------------
+## Phase 4 — Practice + polish
+- Save favorite reharms and passing-chord cards (localStorage, export/import JSON).
+- Drill: "name the technique" by ear; "play the passing chord" in Play it.
+- iPad: everything except MIDI works by touch.
+
+---------------------------------------------------------------------------------------------------
+## Checklist
+- [ ] Phase 0 port + tests + Actions deploy + SW fix
+- [ ] Phase 1 Passing engine, styles, explanations
+- [ ] Phase 2 Lead voicing
+- [ ] Phase 3 MIDI reharm
+- [ ] Phase 4 Practice + polish
