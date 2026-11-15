@@ -1,8 +1,9 @@
 import { playNotes, stopAll } from '../../audio/player';
+import { GENRES, GENRE_IDS } from '../../data/styles';
 import { S, curChords, curKey, curTitle, type KeptVoicing } from '../../state';
 import { impliedNext, leadVoicings, melodyCheck, parsePitch, pitchName, rankLead, voiceMotion, type LeadVoicing, type MelodyCheck, type RankedVoicing } from '../../theory/lead';
 import { fmt, note, noteName } from '../../theory/notes';
-import type { KindId, PChord } from '../../theory/symbols';
+import { famOfKind, fromChart, type KindId, type PChord } from '../../theory/symbols';
 import { kbAbs, type KeyItem } from '../keyboards';
 import { esc, extChoices, pickChord, withExt } from '../passing';
 import { tilesHTML } from '../pieces';
@@ -14,22 +15,25 @@ import { drawKeys, drawMidi, leadHook } from '../play';
  * ordered by the smoothest voice leading from it. Kept voicings can be practised in Play it.
  */
 const HAND = { L: 'var(--c2)', R: 'var(--c0)' };
-interface Model { chord: PChord; bad: boolean; choices: PChord[]; check: MelodyCheck; ranked: RankedVoicing[]; prev: KeptVoicing | null }
+interface Model { chord: PChord; bad: boolean; choices: PChord[]; next: PChord | null; check: MelodyCheck; ranked: RankedVoicing[]; prev: KeptVoicing | null }
+/** What was typed in the melody box when it could not be read (not saved). */
+let melBad: string | null = null;
 function model(): Model {
   /* a dominant is read as the V of the key chord a fifth below it, so its extensions come from that scale */
-  const base = pickChord(S.lsym, S.ld), key = curKey(), nx = impliedNext(base.chord, null, key);
+  const base = pickChord(S.lsym, S.ld), key = curKey(), H = curChords();
+  const next = S.lnx != null && H[S.lnx] ? fromChart(H[S.lnx]) : null, nx = impliedNext(base.chord, next, key);
   const choices = extChoices(base.chord, nx), chord = withExt(base.chord, S.lext, nx);
   const prev = S.lkept[S.lkept.length - 1] ?? null;
   return {
-    chord, bad: base.bad, choices, prev, check: melodyCheck(chord, S.lmel, null, key),
-    ranked: rankLead(leadVoicings(chord, S.lmel, null, key), prev ? prev.notes.map(n => n.m) : null),
+    chord, bad: base.bad, choices, next, prev, check: melodyCheck(chord, S.lmel, next, key),
+    ranked: rankLead(leadVoicings(chord, S.lmel, next, key), prev ? prev.notes.map(n => n.m) : null, GENRES[S.pgenre].voicings),
   };
 }
 const melName = (m: Model): string => pitchName(S.lmel, m.check.note);
 
 /* a key played on the piano or a MIDI keyboard: the highest held note is the melody */
 leadHook.changed = (held: Set<number>): void => {
-  if (held.size) S.lmel = Math.max(...held);
+  if (held.size) { S.lmel = Math.max(...held); melBad = null; }
   drawLead();
 };
 leadHook.ghost = (): Record<number, string> => ({ [S.lmel]: fmt(model().check.note) });
@@ -46,7 +50,7 @@ function voicingCard(r: RankedVoicing, i: number, m: Model): string {
   const mo = r.motion;
   const motion = mo && m.prev ? `<div class="lvmove"><span class="lbl">From ${m.prev.sym} (${m.prev.name})</span><span class="small">${mo.total} semitone${mo.total === 1 ? '' : 's'} of movement in all, ${mo.common} note${mo.common === 1 ? '' : 's'} stay${mo.common === 1 ? 's' : ''}.</span>
       <div class="lvsteps">${[...mo.moves].reverse().map((x, k) => `<span class="${x.semis === 0 ? 'stay' : ''}">${pitchName(x.to, v.notes[v.notes.length - 1 - k].note)} <small>${signed(x.semis)}</small></span>`).join('')}</div></div>` : '';
-  return `<article class="card lvcard${i === 0 && mo ? ' best' : ''}"><div class="ch"><span class="cs">${v.name}</span><span class="cn">${i === 0 && mo ? 'smoothest · ' : ''}${v.formula}</span></div>
+  return `<article class="card lvcard${i === 0 && mo ? ' best' : ''}"><div class="ch"><span class="cs">${v.name}</span><span class="cn">${i === 0 && mo ? 'smoothest · ' : ''}${r.preferred ? GENRES[S.pgenre].label.toLowerCase() + ' · ' : ''}${v.formula}</span></div>
     ${v.sounds ? `<div class="small">Sounds as <b>${v.sounds}</b>.</div>` : ''}
     ${keys(v)}
     <div class="lvhands">${hands}</div>
@@ -77,9 +81,9 @@ function dynHTML(): string {
   const m = model(), n = m.ranked.length;
   return `<div class="panel"><div class="lmel"><span class="lbl">Melody note</span><span class="lmeln">${melName(m)}</span>
       <div class="seg" role="group" aria-label="Move the melody by an octave"><button data-a="loct" data-v="-12" ${S.lmel - 12 < 40 ? 'disabled' : ''}>Octave down</button><button data-a="loct" data-v="12" ${S.lmel + 12 > 96 ? 'disabled' : ''}>Octave up</button></div>
-      <input class="psym lmelin" data-f="mel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type it: E5, Bb4" aria-label="Type the melody note"></div>
+      <input class="psym lmelin" data-f="mel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type it: E5, Bb4" aria-label="Type the melody note">${melBad ? `<span class="small" style="color:var(--c5)">Can't read "${esc(melBad)}". Type a note and an octave from E2 to C7, like E5 or Bb4.</span>` : ''}</div>
     ${checkHTML(m)}</div>
-   <div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${melName(m)} on top</h3><span class="small">${n} voicing${n === 1 ? '' : 's'}${m.prev ? `, smoothest from ${m.prev.sym} first` : ', by type'}. Gold = melody${n ? ', blue = left hand' : ''}.</span></div>
+   <div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${melName(m)} on top</h3><span class="small">${n} voicing${n === 1 ? '' : 's'}${m.prev ? `, smoothest from ${m.prev.sym} first` : `, ${GENRES[S.pgenre].label} favorites first`}. Gold = melody${n ? ', blue = left hand' : ''}.</span></div>
    ${n ? `<div class="cards extcards">${m.ranked.map((r, i) => voicingCard(r, i, m)).join('')}</div>` : `<div class="empty">No voicing puts ${melName(m)} on top of ${m.chord.symbol}: the note has a different 3rd or 7th than the chord. Try a fix above, another note or another chord.</div>`}
    ${keptHTML()}`;
 }
@@ -96,10 +100,12 @@ const play = (ns: number[]): void => playNotes([...ns].sort((a, b) => a - b));
 export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'none' | null {
   const m = () => model();
   switch (a) {
-    case 'lchord': S.ld = +d.d!; S.lsym = null; S.lext = null; return 'render';
+    case 'lchord': S.ld = +d.d!; S.lsym = null; S.lext = null; melBad = null; return 'render';
+    case 'lnext': S.lnx = S.lnx === +d.d! ? null : +d.d!; S.lext = null; return 'render';
+    case 'lnextx': S.lnx = null; S.lext = null; return 'render';
     case 'lext': S.lext = (d.k || null) as KindId | null; return 'render';
     case 'lsymx': S.lsym = null; S.lext = null; return 'render';
-    case 'loct': { const x = S.lmel + +d.v!; if (x >= 40 && x <= 96) S.lmel = x; return 'draw'; }
+    case 'loct': { const x = S.lmel + +d.v!; if (x >= 40 && x <= 96) S.lmel = x; melBad = null; return 'draw'; }
     case 'lhear': { const v = m().ranked[+d.i!]?.voicing; if (v) play(v.notes.map(n => n.midi)); return 'none'; }
     case 'lkeep': {
       const mm = m(), v = mm.ranked[+d.i!]?.voicing;
@@ -119,6 +125,7 @@ export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'non
     case 'lfix': {
       const f = m().check.fixes[+d.i!];
       if (!f) return 'none';
+      melBad = null;
       if (f.midi != null) { S.lmel = f.midi; return 'draw'; }
       if (f.chord) {
         const deg = curChords().findIndex(h => h.symbol === f.chord!.symbol);
@@ -134,8 +141,16 @@ export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'non
 /** Typed input on the Melody tab: the chord box or the melody box. */
 export function leadTyped(field: string, value: string | null): void {
   if (field === 'lead') { S.lsym = value; S.lext = null; return; }
-  const p = value ? parsePitch(value) : null;
-  if (p != null && p >= 40 && p <= 96) S.lmel = p;
+  if (!value) { melBad = null; return; }
+  const p = parsePitch(value);
+  if (p != null && p >= 40 && p <= 96) { S.lmel = p; melBad = null; } else melBad = value;
+}
+
+/** One line under the next-chord picker: which scale the chord is heard in, and why. */
+function nextNote(m: Model): string {
+  const sc = m.check.scale, name = `${fmt(sc.root)} ${sc.name}`;
+  if (m.next) return `Optional. ${m.chord.symbol} going to ${m.next.symbol} is heard in <b>${name}</b>: that scale decides which notes fit.`;
+  return `Optional: pick the chord that comes next. Without one, ${m.chord.symbol} is heard in <b>${name}</b>${famOfKind(m.chord) === 'dom' ? ' (a dominant is read as the V of the chord a fifth below it in this key)' : ''}.`;
 }
 
 export function viewLead(): string {
@@ -146,10 +161,14 @@ export function viewLead(): string {
    <div class="panel pick">
      <span class="lab">Chord</span><div>${tilesHTML(H, S.lsym && !m.bad ? -1 : S.ld, 'lchord', 'r1')}
        <div class="psymrow"><input class="psym${m.bad ? ' bad' : ''}" data-f="lead" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type any chord: Ebmaj7, F#m7b5, G13" value="${esc(S.lsym || '')}" aria-label="Type the chord">${S.lsym ? '<button class="pill sm" data-a="lsymx">Clear</button>' : ''}${m.bad ? '<span class="small" style="color:var(--c5)">Can\'t read that chord. Using the picked one.</span>' : ''}</div>${extRow}</div>
+     <span class="lab">Goes to</span><div>${tilesHTML(H, S.lnx ?? -1, 'lnext', 'r5', true)}
+       <p class="small" style="margin:8px 0 0">${nextNote(m)}${S.lnx != null ? ' <button class="linkbtn" data-a="lnextx">Clear</button>' : ''}</p></div>
+     <span class="lab">Genre</span><div><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div>
+       <p class="small" style="margin:8px 0 0">The genre's favorite voicing types are listed first. Once you keep a voicing, the smoothest voice leading comes first instead.</p></div>
    </div>
    <div class="midibar" id="midibar"></div>
    <div class="pkwrap" id="pkwrap"></div>
    <p class="hint" style="margin-top:-6px">Tap a key, or play a note on your MIDI keyboard, to set the melody note (the highest note you hold). The gold dot marks it.</p>
-   <div class="stack" id="ldyn">${dynHTML()}</div>
+   <div class="stack" id="ldyn"></div>
   </div>`;
 }

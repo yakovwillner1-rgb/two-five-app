@@ -60,6 +60,7 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   drop 2&4, block chords, rootless A/B, Barry Harris 6th-diminished, So What / quartal, upper
   structures, spread, cluster. "Keep" builds a voice-leading line; the next chord's voicings are then
   ordered smoothest first, with each voice's motion. Kept voicings can be practised in Play it.
+  Optional "Goes to" chord (decides the scale) and genre (its favorite voicing types come first).
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.
@@ -233,7 +234,7 @@ play/export → drag into Logic → lines up with the original region.
       pending: merge to `main` and set Pages source to "GitHub Actions")
 - [x] Phase 1 Passing engine, styles, explanations (see `docs/OPEN_QUESTIONS.md` 6–24 for defaults
       waiting on Ralph; IAC/Logic playback not checked with real devices)
-- [x] Phase 2 Lead voicing (Melody tab; defaults and open points in `docs/OPEN_QUESTIONS.md` 44–56;
+- [x] Phase 2 Lead voicing (Melody tab; Claude's picks for 44–56 and open points 57–58 in `docs/OPEN_QUESTIONS.md`;
       not checked with a real MIDI keyboard or on iPad)
 - [ ] Phase 3 MIDI reharm
 - [ ] Phase 4 Practice + polish

@@ -30,6 +30,13 @@ export function viewGuide(): string {
    <li>The V's 7th steps down to the target's 3rd. In C7 → F, the B♭ goes down to A.</li>
    <li>The borrowed note (B♭ in this example) is outside the home key, so the ear hears a short trip away and back.</li>
   </ul>
+  <h3>Melody on top</h3>
+  <p>A voicing is the same chord with its notes placed in a chosen order. When a tune has a melody, the melody note goes on top and the rest of the chord is built under it. The <b>Melody</b> tab does this: pick a chord and a melody note and it lists the voicings, from close position to rootless left-hand shapes and upper structures.</p>
+  <ul>
+   <li>It first checks the note. A chord tone or an available tension is fine. An avoid note (like F on top of Cmaj7) sits a half step above a chord tone and blurs the chord, so the tab offers fixes.</li>
+   <li>Keep a voicing and move to the next chord: the list is then ordered by the smoothest voice leading, the least movement from the voicing you kept.</li>
+   <li>Send the kept voicings to Play it to practise them note for note.</li>
+  </ul>
   <h3>Practice path</h3>
   <ol>
    <li>On the Move tab, start on I and land on IV. Play and loop it until the move feels automatic.</li>
@@ -37,6 +44,7 @@ export function viewGuide(): string {
    <li>On the Progression tab, load I → vi → ii → V and switch the 2‑5 on in front of each chord. That's the sound of most standards.</li>
    <li>Swipe through all 12 home keys, then switch to Minor.</li>
    <li>Use the Drill tab to spell 2‑5s without looking.</li>
+   <li>On the Melody tab, voice ii → V → I under one held melody note, keep the smoothest voicing each time, then play the line in Play it.</li>
   </ol>
   <h3>Source</h3>
   <p class="small">Built from the Major, Natural Minor, Melodic Minor and Harmonic Minor editions of Jeff Schneider's <i>The Last Chord/Scale Chart You'll Ever Need</i>. The chords and scales here are worked out from the scale formulas, so in rare keys you'll see correct but unusual spellings like E♯ or 𝄪.</p></div>`;

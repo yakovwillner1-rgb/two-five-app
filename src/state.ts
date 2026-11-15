@@ -30,6 +30,8 @@ export interface State {
   lhold: number; llatch: boolean;
   /* Melody tab: the chord (degree, or typed symbol, plus a picked extension), the melody note (MIDI), the voicings kept so far */
   ld: number; lsym: string | null; lext: KindId | null; lmel: number; lkept: KeptVoicing[];
+  /** Melody tab: degree of the chord that follows (decides the scale), or null when not set */
+  lnx: number | null;
   /** last typed progression chord that could not be read (not saved) */
   progBad: string | null;
 }
@@ -39,7 +41,7 @@ export const S: State = {
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
   mfam: 'major', mview: 'parallel', mdeg: 1, mroot: null, dmode: 'spell', efam: 'major', ear: null, escore: { r: 0, t: 0 }, voiceHover: true,
   pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, fromExt: null, toExt: null, way: null, pshowAll: false, progBad: null, lhold: 500, llatch: false,
-  ld: 0, lsym: null, lext: null, lmel: 76, lkept: [],
+  ld: 0, lsym: null, lext: null, lmel: 76, lkept: [], lnx: null,
 };
 
 /* Same storage key as the single-file app, so saved settings carry over. */
@@ -49,7 +51,7 @@ const snap = () => ({
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
   pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way, lhold: S.lhold, llatch: S.llatch,
-  ld: S.ld, lsym: S.lsym, lext: S.lext, lmel: S.lmel, lkept: S.lkept,
+  ld: S.ld, lsym: S.lsym, lext: S.lext, lmel: S.lmel, lkept: S.lkept, lnx: S.lnx,
 });
 export function save(): void { try { localStorage.setItem(LSK, JSON.stringify(snap())); } catch (e) { /* storage full or blocked */ } }
 export function load(): Partial<State> { try { return JSON.parse(localStorage.getItem(LSK) || '{}') || {}; } catch (e) { return {}; } }
@@ -68,6 +70,6 @@ export function setMode(m: HomeMode): void {
   S.mode = m; S.from = 0; S.to = 3;
   S.prog = HOME[m].presets[0][1].map((d, i) => ({ d, via: i > 0 ? 'secIIV' : null }));
   S.fromSym = null; S.toSym = null; S.fromExt = null; S.toExt = null;
-  S.ld = 0; S.lext = null;
+  S.ld = 0; S.lext = null; S.lnx = null;
   S.quiz = null;
 }

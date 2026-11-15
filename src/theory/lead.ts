@@ -79,8 +79,12 @@ const NINES = new Set(['9', '♭9', '♯9']);
  * Four-way close: root, 3rd, 5th, 7th, where a tension takes the place of a chord tone:
  * a 9 (♭9, ♯9) replaces the root; an 11, ♯11, 13 or ♭13 replaces the 5th. The 3rd and 7th always stay.
  * The chord's own extensions are put in first, then the melody (the melody always wins its slot).
+ * With the root on top of a major 7 chord the 6th takes the place of the 7th (see `sixthForSeventh`).
  * Returns semitones above the root, or null when the melody cannot sit on this chord.
  */
+/** Root in the melody of a major 7 chord: the 7th would sit a half step under it, so the 6th is used. */
+export const sixthForSeventh = (c: PChord, melody: number): boolean =>
+  rel(c, melody) === 0 && famOfKind(c) === 'maj' && slots(c).seventh === 11;
 export function fourWay(c: PChord, melody: number): number[] | null {
   const s = slots(c), mel = rel(c, melody);
   if (s.third === null) return null;
@@ -96,10 +100,11 @@ export function fourWay(c: PChord, melody: number): number[] | null {
     if (mel === 0) rootSlot = 0;
     else if (mel === s.fifth) fifthSlot = mel;
     else if (mel <= 3) rootSlot = mel;
-    else if (mel === 5 || mel === 6 || mel === 8 || mel === 9) fifthSlot = mel;
+    else if (mel >= 5 && mel <= 9) fifthSlot = mel; /* 11, ♯11, 5 (on a chord written without one), ♭13, 13 */
     else return null; /* a different 3rd or 7th: the melody belongs to another chord */
   }
-  const out = [rootSlot, s.third, ...(fifthSlot === null ? [] : [fifthSlot]), ...(s.seventh === null ? [] : [s.seventh])];
+  const seventh = sixthForSeventh(c, melody) ? 9 : s.seventh;
+  const out = [rootSlot, s.third, ...(fifthSlot === null ? [] : [fifthSlot]), ...(seventh === null ? [] : [seventh])];
   return [...new Set(out)];
 }
 
@@ -125,7 +130,7 @@ export function rangeOk(midis: number[]): boolean {
 
 /* ---------- the voicing types ---------- */
 interface Ctx { c: PChord; melody: number; pal: Palette; scale: ChordScale; key: Key }
-type Draft = Omit<LeadVoicing, 'notes' | 'formula'> & { midis: number[]; left?: number[]; label?: (midi: number) => { note: Note; label: string } };
+type Draft = Omit<LeadVoicing, 'notes' | 'formula'> & { midis: number[]; left?: number[]; label?: (midi: number) => { note: Note; label: string }; /** the 6th stands in for the major 7th: label it 6, not 13 */ sixth?: boolean };
 const an = (s: string): string => (/^[AEF]/.test(s) ? 'an' : 'a');
 
 function closeFamily(x: Ctx): Draft[] {
@@ -134,13 +139,15 @@ function closeFamily(x: Ctx): Draft[] {
   const cl = under(x.c, set, x.melody), out: Draft[] = [];
   const sub = set.map(s => x.pal.at(s)).filter(p => p.role !== 'chord' || !['R', '3', '♭3', '4', '5', '♭5', '♯5', '7', '♭7', '𝄫7', '6'].includes(p.label)).map(p => p.label);
   const subText = sub.length ? ` The ${sub.join(' and ')} take${sub.length === 1 ? 's' : ''} the place of ${sub.some(l => NINES.has(l)) ? 'the root' : ''}${sub.some(l => NINES.has(l)) && sub.some(l => !NINES.has(l)) ? ' and ' : ''}${sub.some(l => !NINES.has(l)) ? 'the 5th' : ''}.` : '';
-  out.push({ type: 'close', id: 'close', name: 'Close', midis: cl, why: `Every note as near as it goes under the melody, all inside one octave.${subText}` });
+  const sixth = sixthForSeventh(x.c, x.melody);
+  const sixText = sixth ? ' The root is on top, so the 6th takes the place of the 7th: the 7th would rub a half step under the melody.' : '';
+  out.push({ type: 'close', id: 'close', name: 'Close', midis: cl, sixth, why: `Every note as near as it goes under the melody, all inside one octave.${subText}${sixText}` });
   if (cl.length === 4) {
     const drop = (idx: number[]): number[] => cl.map((m, i) => (idx.includes(i) ? m - 12 : m)).sort((a, b) => a - b);
-    out.push({ type: 'drop2', id: 'drop2', name: 'Drop 2', midis: drop([2]), why: 'The close voicing with its second note from the top dropped an octave: more open, the melody stands out.' });
-    out.push({ type: 'drop3', id: 'drop3', name: 'Drop 3', midis: drop([1]), why: 'The close voicing with its third note from the top dropped an octave: a wide gap above the bass note.' });
-    out.push({ type: 'drop24', id: 'drop24', name: 'Drop 2 & 4', midis: drop([2, 0]), why: 'The second and fourth notes from the top dropped an octave: the most open of the drop voicings.' });
-    out.push({ type: 'block', id: 'block', name: 'Block chord (locked hands)', midis: [x.melody - 12, ...cl], left: [x.melody - 12], why: 'George Shearing\'s locked hands: the close voicing with the melody doubled an octave below.' });
+    out.push({ type: 'drop2', id: 'drop2', name: 'Drop 2', midis: drop([2]), sixth, why: `The close voicing with its second note from the top dropped an octave: more open, the melody stands out.${sixText}` });
+    out.push({ type: 'drop3', id: 'drop3', name: 'Drop 3', midis: drop([1]), sixth, why: `The close voicing with its third note from the top dropped an octave: a wide gap above the bass note.${sixText}` });
+    out.push({ type: 'drop24', id: 'drop24', name: 'Drop 2 & 4', midis: drop([2, 0]), sixth, why: `The second and fourth notes from the top dropped an octave: the most open of the drop voicings.${sixText}` });
+    out.push({ type: 'block', id: 'block', name: 'Block chord (locked hands)', midis: [x.melody - 12, ...cl], left: [x.melody - 12], sixth, why: `George Shearing's locked hands: the close voicing with the melody doubled an octave below.${sixText}` });
   }
   return out;
 }
@@ -229,20 +236,22 @@ function quartal(x: Ctx): Draft[] {
   return out;
 }
 
-/** Major triads over a dominant's 3rd and 7th (Levine's upper structures). */
-export const UPPER_TRIADS: { numeral: string; iv: Interval; kind: KindId; adds: string }[] = [
+/** Triads over a dominant's 3rd and 7th (Levine's upper structures): upper-case = major triad, lower-case = minor triad. */
+export const UPPER_TRIADS: { numeral: string; iv: Interval; kind: KindId; adds: string; minor?: boolean }[] = [
   { numeral: 'II', iv: M2, kind: '13♯11', adds: '9, ♯11 and 13' },
   { numeral: '♭III', iv: m3, kind: '7♯9', adds: '♯9' },
   { numeral: '♭V', iv: d5, kind: '7♭9♯11', adds: '♭9 and ♯11' },
   { numeral: '♭VI', iv: m6, kind: '7♯9♭13', adds: '♯9 and ♭13' },
   { numeral: 'VI', iv: M6, kind: '13♭9', adds: '13 and ♭9' },
+  { numeral: 'i', iv: { steps: 0, semis: 0 }, kind: '7♯9', adds: '♯9', minor: true },
+  { numeral: '♭ii', iv: m2, kind: '7♭9♭13', adds: '♭9 and ♭13', minor: true },
 ];
 function upper(x: Ctx): Draft[] {
   const s = slots(x.c);
   if (famOfKind(x.c) !== 'dom' || s.third !== 4 || s.seventh !== 10 || x.c.bass) return [];
   const pc = mod(x.melody, 12), out: Draft[] = [];
   for (const u of UPPER_TRIADS) {
-    const tri = makeChord(simplifyRoot(transpose(x.c.root, u.iv)), '');
+    const tri = makeChord(simplifyRoot(transpose(x.c.root, u.iv)), u.minor ? 'm' : '');
     if (!tri.tones.some(t => pcOf(t) === pc)) continue;
     const right = [...tri.tones.filter(t => pcOf(t) !== pc).map(t => x.melody - mod(pc - pcOf(t), 12)).sort((a, b) => a - b), x.melody];
     /* the tritone as high as it goes under the right hand, either note on the bottom */
@@ -250,15 +259,17 @@ function upper(x: Ctx): Draft[] {
     const left = lows.sort((a, b) => b[0] - a[0])[0];
     if (left[0] < 41) continue;
     const full = makeChord(x.c.root, u.kind);
-    /* right-hand notes are spelled as the triad (B♭ in an E♭ triad), and labelled by what they are in the chord (♯9) */
+    /* right-hand notes are spelled as the triad (B♭ in an E♭ triad) and labelled by what they are in the chord (♯9);
+       a triad note that is the chord's own root, 3rd, 5th or 7th keeps the chord's spelling (E, not F♭, in D♭m over C7) */
     const label = (m: number) => {
       const i = full.tones.findIndex(t => pcOf(t) === mod(m, 12)), p = x.pal.at(rel(x.c, m));
-      const tri3 = right.includes(m) ? tri.tones.find(t => pcOf(t) === mod(m, 12)) : undefined;
+      const basic = [0, 4, 7, 10].includes(rel(x.c, m));
+      const tri3 = right.includes(m) && !basic ? tri.tones.find(t => pcOf(t) === mod(m, 12)) : undefined;
       return { note: tri3 ?? (i >= 0 ? full.tones[i] : p.note), label: i >= 0 ? full.labels[i] : p.label };
     };
     out.push({
-      type: 'upper', id: 'upper' + u.numeral, name: `Upper structure ${u.numeral}`, midis: [...left, ...right], left, label, sounds: full.symbol,
-      why: `${an(fmt(tri.root))} ${fmt(tri.root)} major triad in the right hand over the 3rd and 7th of ${fmt(x.c.root)}7 in the left. It adds the ${u.adds}: the chord sounds as ${full.symbol}.`,
+      type: 'upper', id: 'upper' + u.numeral, name: `Upper structure ${u.numeral}${u.minor ? ' (minor triad)' : ''}`, midis: [...left, ...right], left, label, sounds: full.symbol,
+      why: `${an(fmt(tri.root))} ${fmt(tri.root)} ${u.minor ? 'minor' : 'major'} triad in the right hand over the 3rd and 7th of ${fmt(x.c.root)}7 in the left. It adds the ${u.adds}: the chord sounds as ${full.symbol}.`,
     });
   }
   return out;
@@ -274,10 +285,12 @@ function spread(x: Ctx): Draft[] {
     const rest = set.filter(v => v !== 0 && v !== upperSemi || v === mel);
     const right = under(x.c, [...new Set([...rest, mel])], x.melody);
     if (right.length < 2 || right[0] <= top) return;
-    out.push({ type, id: type, name, midis: [bass, top, ...right], left: [bass, top], why: `Left hand ${lh}; ${text}` });
+    out.push({ type, id: type, name, midis: [bass, top, ...right], left: [bass, top], sixth: sixthForSeventh(x.c, x.melody), why: `Left hand ${lh}; ${text}` });
   };
-  make('spread17', x.c.labels.includes('6') ? 'Spread 1–6' : 'Spread 1–7', s.seventh, x.c.labels.includes('6') ? 'root and 6th' : 'root and 7th', 'the right hand has the 3rd and the color notes under the melody.');
-  make('spread110', 'Spread 1–10', s.third, 'root and the 3rd a tenth above it', `the right hand has the ${x.c.labels.includes('6') ? '6th' : '7th'} and the color notes under the melody.`);
+  const sixth = sixthForSeventh(x.c, x.melody), six = sixth || x.c.labels.includes('6');
+  const note6 = sixth ? ' The root is on top, so the 6th takes the place of the 7th.' : '';
+  make('spread17', six ? 'Spread 1–6' : 'Spread 1–7', sixth ? 9 : s.seventh, six ? 'root and 6th' : 'root and 7th', `the right hand has the 3rd and the color notes under the melody.${note6}`);
+  make('spread110', 'Spread 1–10', s.third, 'root and the 3rd a tenth above it', `the right hand has the ${six ? '6th' : '7th'} and the color notes under the melody.${note6}`);
   return out;
 }
 
@@ -309,7 +322,7 @@ export function leadVoicings(c: PChord, melody: number, next: PChord | null, key
     const left = new Set(d.left ?? []);
     const notes: LNote[] = d.midis.map(m => {
       const p = d.label ? d.label(m) : x.pal.at(rel(c, m));
-      return { midi: m, note: p.note, label: p.label, hand: left.has(m) ? 'L' : 'R' };
+      return { midi: m, note: p.note, label: d.sixth && rel(c, m) === 9 ? '6' : p.label, hand: left.has(m) ? 'L' : 'R' };
     });
     return { type: d.type, id: d.id, name: d.name, formula: notes.map(n => n.label).join(' '), notes, why: d.why, sounds: d.sounds };
   });
@@ -332,13 +345,23 @@ export function voiceMotion(prev: number[], cur: number[]): Motion {
   const total = moves.reduce((s, m) => s + Math.abs(m.semis), 0);
   return { moves, total, mean: moves.length ? total / moves.length : 0, common: moves.filter(m => m.semis === 0).length };
 }
-export interface RankedVoicing { voicing: LeadVoicing; motion: Motion | null }
-/** Smoothest first when there is a previous voicing (least movement per voice, then most common tones); else the type order. */
-export function rankLead(list: LeadVoicing[], prev: number[] | null): RankedVoicing[] {
-  if (!prev || !prev.length) return list.map(v => ({ voicing: v, motion: null }));
-  return list.map((v, i) => ({ voicing: v, motion: voiceMotion(prev, v.notes.map(n => n.midi)), i }))
-    .sort((p, q) => p.motion.mean - q.motion.mean || q.motion.common - p.motion.common || p.i - q.i)
-    .map(({ voicing, motion }) => ({ voicing, motion }));
+export interface RankedVoicing { voicing: LeadVoicing; motion: Motion | null; /** one of the style's preferred voicing types */ preferred: boolean }
+/** The voicing-type names used in the style data (src/data/styles.ts) → the voicing types here. */
+export const STYLE_TYPES: Record<string, LeadType[]> = {
+  rootless: ['rootlessA', 'rootlessB'], drop2: ['drop2'], spread: ['spread17', 'spread110'], upperStructure: ['upper'], block: ['block'],
+  cluster: ['cluster'], quartal: ['soWhat', 'quartal'], close: ['close'], triad: ['close'], shell: [],
+};
+/**
+ * With a previous voicing: smoothest first (least movement per voice, then most common tones, then
+ * the style's preferred types). Without one: the style's preferred types first, in the style's
+ * order, then the rest by type.
+ */
+export function rankLead(list: LeadVoicing[], prev: number[] | null, prefer: string[] = []): RankedVoicing[] {
+  const order = prefer.flatMap(k => STYLE_TYPES[k] ?? []);
+  const pref = (v: LeadVoicing): number => { const i = order.indexOf(v.type); return i < 0 ? order.length : i; };
+  const rows = list.map((v, i) => ({ voicing: v, motion: prev && prev.length ? voiceMotion(prev, v.notes.map(n => n.midi)) : null, preferred: pref(v) < order.length, i }));
+  rows.sort((p, q) => (p.motion && q.motion ? p.motion.mean - q.motion.mean || q.motion.common - p.motion.common : 0) || pref(p.voicing) - pref(q.voicing) || p.i - q.i);
+  return rows.map(({ voicing, motion, preferred }) => ({ voicing, motion, preferred }));
 }
 
 /* ---------- the melody note against the chord ---------- */

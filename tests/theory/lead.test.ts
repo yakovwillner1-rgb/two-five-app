@@ -32,10 +32,23 @@ describe('close and drop voicings', () => {
     expect(spell(get('Cmaj7', 'E5', 'drop24'))).toBe('G3 C4 B4 E5');
   });
   it('each inversion: the melody decides', () => {
-    expect(spell(get('Cmaj7', 'C5', 'close'))).toBe('E4 G4 B4 C5');
     expect(spell(get('Cmaj7', 'G4', 'close'))).toBe('B3 C4 E4 G4');
     expect(spell(get('Cmaj7', 'B4', 'close'))).toBe('C4 E4 G4 B4');
     expect(spell(get('Dm7', 'A4', 'close'))).toBe('C4 D4 F4 A4');
+  });
+  it('root on top of a major 7 chord: the 6th takes the place of the 7th (no half step under the melody)', () => {
+    const v = get('Cmaj7', 'C5', 'close')!;
+    expect(spell(v)).toBe('E4 G4 A4 C5');
+    expect(v.formula).toBe('3 5 6 R');
+    expect(spell(get('Cmaj7', 'C5', 'block'))).toBe('C4 E4 G4 A4 C5'); // the Shearing C6 block
+    expect(spell(get('Cmaj7', 'C5', 'spread17'))).toBe('C2 A2 E4 G4 C5');
+    expect(get('Cmaj7', 'C5', 'spread17')!.name).toBe('Spread 1–6');
+    /* only then: other melody notes keep the 7th, and other chord types keep theirs */
+    expect(get('Cmaj7', 'G4', 'close')!.formula).toBe('7 R 3 5');
+    expect(get('Cm7', 'C5', 'close')!.formula).toBe('♭3 5 ♭7 R');
+    expect(get('C7', 'C5', 'close')!.formula).toBe('3 5 ♭7 R');
+    expect(get('Ebmaj7', 'Eb5', 'close')!.formula).toBe('3 5 6 R');
+    expect(spell(get('Ebmaj7', 'Eb5', 'close'))).toBe('G4 B♭4 C5 E♭5');
   });
   it('a 9 on top takes the place of the root; a 13 takes the place of the 5th', () => {
     expect(get('Cmaj7', 'D5', 'close')!.formula).toBe('3 5 7 9');
@@ -54,6 +67,9 @@ describe('close and drop voicings', () => {
     expect(get('Dm9', 'C5', 'close')!.formula).toBe('9 ♭3 5 ♭7');
     expect(spell(get('G13', 'E5', 'close'))).toBe('F4 A4 B4 E5');
     expect(get('G13', 'E5', 'close')!.formula).toBe('♭7 9 3 13');
+  });
+  it('a chord written without a 5th still takes the 5th as melody (G over C13♯11)', () => {
+    expect(get('C13#11', 'G5', 'close')!.formula).toBe('♭7 9 3 5');
   });
   it('the melody wins its slot back (root on top of Dm9)', () => {
     expect(get('Dm9', 'D5', 'close')!.formula).toBe('♭3 5 ♭7 R');
@@ -190,8 +206,16 @@ describe('upper structures (major triad over the 3rd and 7th of a dominant)', ()
     const ids = (mel: string) => list('C7', mel).filter(v => v.type === 'upper').map(v => v.id).sort();
     expect(ids('A5')).toEqual(['upperII', 'upperVI']);          // A: 13 of II (D F♯ A) and root of VI (A C♯ E)
     expect(ids('F#5')).toEqual(['upperII', 'upper♭V']);         // F♯/G♭
-    expect(ids('Eb5')).toEqual(['upper♭III', 'upper♭VI']);      // E♭
+    expect(ids('Eb5')).toEqual(['upperi', 'upper♭III', 'upper♭VI']); // E♭ (also the 3rd of the C minor triad)
     expect(ids('F5')).toEqual([]);
+  });
+  it('minor triads: i = 7♯9 (C E♭ G over C7), ♭ii = 7♭9♭13 (D♭ E A♭ over C7)', () => {
+    const i = get('C7', 'Eb5', 'upperi')!, bii = get('C7', 'Ab5', 'upper♭ii')!;
+    expect(i.sounds).toBe('C7♯9');
+    expect(i.notes.filter(n => n.hand === 'R').map(n => n.label)).toEqual(['5', 'R', '♯9']);
+    expect(bii.sounds).toBe('C7♭9♭13');
+    expect(spell(bii)).toBe('E4 B♭4 D♭5 E5 A♭5'); // the triad's F♭ is the chord's 3rd, so it is written E
+    expect(bii.notes.filter(n => n.hand === 'R').map(n => n.label)).toEqual(['♭9', '3', '♭13']);
   });
   it('only on dominant chords with a major 3rd', () => {
     expect(list('Cmaj7', 'D5').some(v => v.type === 'upper')).toBe(false);
@@ -270,6 +294,22 @@ describe('voice leading', () => {
     expect(r[0].motion!.total).toBe(1);
     for (let i = 1; i < r.length; i++) expect(r[i].motion!.mean).toBeGreaterThanOrEqual(r[i - 1].motion!.mean);
   });
+  it('no previous voicing: the style\'s favorite types come first, in its order, then the rest by type', () => {
+    const vs = list('Cmaj7', 'E5');
+    const jazz = rankLead(vs, null, ['rootless', 'drop2', 'shell']);
+    expect(jazz.slice(0, 3).map(r => r.voicing.id)).toEqual(['rootlessA', 'rootlessB', 'drop2']);
+    expect(jazz.slice(0, 4).map(r => r.preferred)).toEqual([true, true, true, false]);
+    expect(jazz[3].voicing.id).toBe('close');
+    const neo = rankLead(vs, null, ['cluster', 'rootless', 'spread']);
+    expect(neo[0].voicing.id).toBe('cluster');
+    expect(neo.map(r => r.voicing.id).sort()).toEqual(vs.map(v => v.id).sort());
+  });
+  it('with a previous voicing the style only breaks ties', () => {
+    const vs = list('G7', 'E5', 'Cmaj7'), prev = get('Dm7', 'E5', 'rootlessA', 'G7')!.notes.map(n => n.midi);
+    const r = rankLead(vs, prev, ['spread']);
+    expect(r[0].voicing.id).toBe('rootlessB');
+    for (let i = 1; i < r.length; i++) expect(r[i].motion!.mean).toBeGreaterThanOrEqual(r[i - 1].motion!.mean);
+  });
 });
 
 describe('melody check', () => {
@@ -284,6 +324,15 @@ describe('melody check', () => {
     const m = melodyCheck(ch('Em7'), p('F5'), null, C);
     expect(m.role).toBe('avoid');
     expect(m.label).toBe('♭9');
+  });
+  it('the next chord decides the scale: C over E7 fits going to a minor chord, not going to a major one', () => {
+    expect(melodyCheck(ch('E7'), p('C5'), ch('Am7'), C)).toMatchObject({ role: 'tension', label: '♭13' });
+    expect(melodyCheck(ch('E7'), p('C5'), ch('Amaj7'), C).role).toBe('outside');
+    expect(melodyCheck(ch('E7'), p('C#5'), ch('Amaj7'), C)).toMatchObject({ role: 'tension', label: '13' });
+    /* no next chord: E7 in C major is read as the V of Am7 */
+    expect(melodyCheck(ch('E7'), p('C5'), null, C)).toMatchObject({ role: 'tension', label: '♭13' });
+    /* a dominant that goes down a half step (tritone sub): Lydian dominant, so the ♯11 fits */
+    expect(melodyCheck(ch('Db7'), p('G4'), ch('Cmaj7'), C)).toMatchObject({ role: 'tension', label: '♯11' });
   });
   it('chord tones and available tensions pass with no fix', () => {
     expect(melodyCheck(ch('Cmaj7'), p('E5'), null, C)).toMatchObject({ role: 'chord', label: '3', fixes: [] });

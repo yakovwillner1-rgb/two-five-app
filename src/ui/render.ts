@@ -34,7 +34,7 @@ const ICONS: Record<Tab, string> = {
 const ico = (k: Tab): string => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
 const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['lead', 'Melody'], ['listen', 'Listen'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
 export const TITLES: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody on top', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', ext: 'Extensions', chart: 'Charts', guide: 'Guide' };
-const SHORT: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody', move: 'Move', prog: 'Chain', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
+const SHORT: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody', move: 'Move', prog: 'Prog', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
 const VIEWS: Record<Tab, () => string> = { play: viewPlay, listen: viewListen, lead: viewLead, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, ext: viewExt, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
