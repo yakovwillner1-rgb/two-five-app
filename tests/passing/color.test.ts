@@ -145,5 +145,5 @@ describe('every extension on every chord type', () => {
       }
     }
     expect(bad.slice(0, 10)).toEqual([]);
-  });
+  }, 60_000); // a wide sweep: slow on the GitHub build machine (the 5 s default timed out there)
 });
