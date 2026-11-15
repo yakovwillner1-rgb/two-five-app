@@ -1,5 +1,4 @@
-import { S, curChords, curMode, earNotes } from '../state';
-import { approach } from '../theory/home';
+import { S, curMode, earNotes } from '../state';
 import { modeFrom } from '../theory/modes';
 import { mod, pcOf } from '../theory/notes';
 import { playbackVoicing } from '../theory/voicings';
@@ -56,26 +55,16 @@ export function playSeq(events: PlayEvent[], tag: string, done?: () => void): vo
   });
   timers.push(setTimeout(() => { if (tok !== token) return; if (done) done(); else stopAll(); }, end * 1000 + 60));
 }
-const beat = (): number => 60 / S.tempo;
+export const beat = (): number => 60 / S.tempo;
 
-function moveEvents(): PlayEvent[] {
-  const H = curChords(), from = H[S.from], to = H[S.to], ap = approach(to, S.flavor)!, b = beat();
-  return [{ t: 0, dur: 4 * b, tones: from.tones, id: 'mf' }, { t: 4 * b, dur: 2 * b, tones: ap.ii.tones, id: 'm2' }, { t: 6 * b, dur: 2 * b, tones: ap.V.tones, id: 'm5' }, { t: 8 * b, dur: 4 * b, tones: to.tones, id: 'mt' }];
+/** Filled in by the Move and Progression views: what the big play button plays. */
+export const playSources = { move: (): PlayEvent[] => [], prog: (): PlayEvent[] => [] };
+export function playMove(): void { playSeq(playSources.move(), 'move', () => { if (S.loop && S.playing === 'move' && S.tab === 'move') playMove(); else stopAll(); }); }
+export function playProg(): void {
+  const ev = playSources.prog();
+  if (!ev.length) return;
+  playSeq(ev, 'prog', () => { if (S.loop && S.playing === 'prog' && S.tab === 'prog') playProg(); else stopAll(); });
 }
-export function playMove(): void { playSeq(moveEvents(), 'move', () => { if (S.loop && S.playing === 'move' && S.tab === 'move') playMove(); else stopAll(); }); }
-
-function progEvents(): PlayEvent[] {
-  const H = curChords(), b = beat();
-  let t = 0;
-  const ev: PlayEvent[] = [];
-  S.prog.forEach((p, i) => {
-    const tc = H[p.d], ap = p.a ? approach(tc, S.flavor) : null;
-    if (ap) { ev.push({ t, dur: 2 * b, tones: ap.ii.tones, id: 'p' + i + 'a' }); t += 2 * b; ev.push({ t, dur: 2 * b, tones: ap.V.tones, id: 'p' + i + 'b' }); t += 2 * b; }
-    ev.push({ t, dur: 4 * b, tones: tc.tones, id: 'p' + i + 'c' }); t += 4 * b;
-  });
-  return ev;
-}
-export function playProg(): void { if (!S.prog.length) return; playSeq(progEvents(), 'prog', () => { if (S.loop && S.playing === 'prog' && S.tab === 'prog') playProg(); else stopAll(); }); }
 
 export function playChords(list: Chord[], id?: string[]): void {
   const b = beat();

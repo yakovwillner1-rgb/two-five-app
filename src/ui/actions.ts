@@ -5,18 +5,20 @@ import { chordInfo } from '../theory/chords';
 import { HOME, approach, keyName } from '../theory/home';
 import { mod } from '../theory/notes';
 import { TYPES } from '../theory/scales';
+import { parseChord } from '../theory/symbols';
 import type { Family, Flavor, HomeMode, ScaleType } from '../theory/types';
 import type { Genre } from '../data/styles';
 import type { Feel } from '../data/techniques';
 import { VOICES, cache, chordByKey } from './pieces';
 import { drawPlay, resetPL } from './play';
-import { hidePop, pickerJustClosed, showPicker, showPop } from './popover';
+import { findWay, progChord } from './passing';
+import { hidePop, pickerJustClosed, showPicker, showPop, showSheet } from './popover';
 import { render, setDir } from './render';
-import { playCard, playCardChord } from './views/pass';
+import { viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
 
 /* Tabs where swiping / arrow keys change the key. */
-const SWIPE: Tab[] = ['move', 'pass', 'map', 'chart', 'prog', 'modes'];
+const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes'];
 
 function step(n: number): void {
   if (rootCtx()) S.mroot = mod(modeRootPc() + n, 12); else S.pc = mod(S.pc + n, 12);
@@ -36,8 +38,6 @@ function onClick(e: MouseEvent): void {
     case 'px': S.px = d.v as State['px']; render(); break;
     case 'pstrict': S.pstrict = d.v === '1'; render(); break;
     case 'phint': S.phint = !S.phint; render(); break;
-    /* Known issue (docs/OPEN_QUESTIONS.md #1): the Progression tab's "2‑5 into every chord" button
-       also uses data-a="pall", so it lands here and flips "All 12 keys" instead. Kept as in the original. */
     case 'pall': S.pall = !S.pall; resetPL(); render(); break;
     case 'psound': S.psound = !S.psound; b.setAttribute('aria-checked', String(S.psound)); save(); break;
     case 'midi': connectMIDI(); break;
@@ -63,30 +63,35 @@ function onClick(e: MouseEvent): void {
     case 'enext': newEar(); render(); playScale(earNotes()); break;
     case 'eopen': S.mfam = S.ear!.fam; S.mdeg = S.ear!.deg; S.mroot = S.ear!.pc; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'tab': S.tab = d.v as Tab; stopAll(); render(); window.scrollTo(0, 0); break;
-    case 'from': S.from = +d.d!; stopAll(); render(); break;
-    case 'to': S.to = +d.d!; stopAll(); render(); break;
+    case 'from': S.from = +d.d!; S.fromSym = null; stopAll(); render(); break;
+    case 'to': S.to = +d.d!; S.toSym = null; stopAll(); render(); break;
     case 'flavor': S.flavor = d.v as Flavor; stopAll(); render(); break;
     case 'loop': S.loop = !S.loop; b.setAttribute('aria-pressed', String(S.loop)); save(); break;
     case 'tempo': S.tempo = Math.max(50, Math.min(200, S.tempo + +d.v!)); document.querySelectorAll('.tempo output').forEach(o => { o.textContent = S.tempo + ' bpm'; }); save(); break;
     case 'play': togglePlay(); break;
     case 'one': { const id = d.id!, c = id.startsWith('qa') ? cache.qz[+id[2]] : cache.chords[id]; playSeq([{ t: 0, dur: 2.6, tones: c.tones, id }], 'x'); break; }
-    case 'preset': S.prog = HOME[S.mode].presets[+d.i!][1].map((dg, i) => ({ d: dg, a: i > 0 && H()[dg].landable })); stopAll(); render(); break;
-    case 'ptog': { const p = S.prog[+d.i!]; if (H()[p.d].landable) p.a = !p.a; stopAll(); render(); break; }
+    case 'preset': S.prog = HOME[S.mode].presets[+d.i!][1].map((dg, i) => ({ d: dg, via: i > 0 ? 'secIIV' : null })); stopAll(); render(); break;
     case 'pdel': S.prog.splice(+d.i!, 1); stopAll(); render(); break;
-    case 'padd': { const dg = +d.d!; S.prog.push({ d: dg, a: S.prog.length > 0 && H()[dg].landable }); stopAll(); render(); break; }
+    case 'padd': S.prog.push({ d: +d.d!, via: null }); S.progBad = null; stopAll(); render(); break;
     case 'pclear': S.prog = []; stopAll(); render(); break;
     case 'mapplay': { const dg = +d.d!, t = H()[dg], ap = approach(t, S.flavor)!; playChords([ap.ii, ap.V, t], ['q' + dg + 'a', 'q' + dg + 'b', 'q' + dg + 'c']); break; }
-    case 'mapopen': S.to = +d.d!; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
+    case 'mapopen': S.to = +d.d!; S.fromSym = null; S.toSym = null; S.way = 'secIIV'; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'chart': S.chart = d.v as ScaleType; stopAll(); render(); break;
     case 'row': { const T = TYPES[S.chart], c = chordInfo(keyName(S.pc, T.keys), S.chart, +d.d!); playSeq([{ t: 0, dur: 2.6, tones: c.tones, id: 'c' + d.d }], 'x'); break; }
-    case 'pfrom': S.pfrom = +d.d!; S.pfromSym = null; stopAll(); render(); break;
-    case 'pto': S.pto = +d.d!; S.ptoSym = null; stopAll(); render(); break;
-    case 'psymx': if (d.f === 'from') S.pfromSym = null; else S.ptoSym = null; stopAll(); render(); break;
+    case 'symx': if (d.f === 'from') S.fromSym = null; else S.toSym = null; stopAll(); render(); break;
+    case 'way': S.way = d.k || null; stopAll(); render(); break;
     case 'pgenre': S.pgenre = d.v as Genre; stopAll(); render(); break;
     case 'pfeel': S.pfeel = d.v as Feel; stopAll(); render(); break;
     case 'pshow': S.pshowAll = !S.pshowAll; stopAll(); render(); break;
-    case 'pplay': playCard(+d.i!); break;
-    case 'pcchord': playCardChord(+d.i!, +d.j!); break;
+    case 'via': stopAll(); showSheet(viaPickerHTML(+d.i!)); break;
+    case 'viaset': S.prog[+d.i!].via = d.k || null; stopAll(); render(); break;
+    case 'pall25': {
+      const has = (i: number) => i > 0 && !!findWay(progChord(S.prog[i - 1]), progChord(S.prog[i]), 'secIIV');
+      const on = !S.prog.every((p, i) => i === 0 || !has(i) || (p.via || '').startsWith('secIIV'));
+      S.prog.forEach((p, i) => { if (i > 0 && on && has(i)) p.via = 'secIIV'; else if (!on && (p.via || '').startsWith('secIIV')) p.via = null; });
+      stopAll(); render(); break;
+    }
+    case 'pnone': S.prog.forEach(p => { p.via = null; }); stopAll(); render(); break;
     case 'qshow': S.quiz!.rev = true; render(); break;
     case 'qhear': playChords(cache.qz, ['qa0', 'qa1', 'qa2']); break;
     case 'qok': case 'qno': S.score.t++; if (a === 'qok') S.score.r++; stopAll(); newQ(); render(); break;
@@ -103,7 +108,7 @@ function onKey(e: KeyboardEvent): void {
   if (t.closest && t.closest('#pop')) return;
   if (e.key === 'ArrowRight' && SWIPE.includes(S.tab)) { e.preventDefault(); step(1); }
   if (e.key === 'ArrowLeft' && SWIPE.includes(S.tab)) { e.preventDefault(); step(-1); }
-  if (S.tab === 'move' && /^[1-7]$/.test(e.key)) { const dg = +e.key - 1; if (curChords()[dg].landable && dg !== S.to) { S.to = dg; stopAll(); render(); } }
+  if (S.tab === 'move' && /^[1-7]$/.test(e.key)) { const dg = +e.key - 1; if (curChords()[dg].landable && (dg !== S.to || S.toSym)) { S.to = dg; S.toSym = null; stopAll(); render(); } }
 }
 
 export function initActions(): void {
@@ -121,8 +126,14 @@ export function initActions(): void {
     const t = e.target as HTMLSelectElement;
     if (t.classList.contains('psym')) {
       const v = (t as unknown as HTMLInputElement).value.trim() || null;
-      if (t.dataset.f === 'from') S.pfromSym = v; else S.ptoSym = v;
-      stopAll(); render(); return;
+      if (t.dataset.f === 'prog') {
+        if (!v) return;
+        const c = parseChord(v);
+        if (c) { S.prog.push({ d: 0, sym: v, via: null }); S.progBad = null; } else S.progBad = v;
+      } else if (t.dataset.f === 'from') S.fromSym = v; else S.toSym = v;
+      stopAll(); render();
+      if (t.dataset.f === 'prog') document.querySelector<HTMLInputElement>('.psym[data-f="prog"]')?.focus();
+      return;
     }
     if (!t.classList.contains('soundsel')) return;
     stopAll(); S.soundOut = t.value || null; save(); bindMidi();

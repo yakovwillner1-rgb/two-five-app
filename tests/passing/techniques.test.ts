@@ -17,7 +17,7 @@ const syms = (from: string, to: string, tech: TechniqueId, keyPc = 0, mode: Home
 describe('SPEC 1.4 test cases', () => {
   it('C major, Cmaj7 → Fmaj7', () => {
     expect(syms('Cmaj7', 'Fmaj7', 'secDom')).toEqual(['C7']);
-    expect(syms('Cmaj7', 'Fmaj7', 'secIIV')).toEqual(['Gm7 C7']);
+    expect(syms('Cmaj7', 'Fmaj7', 'secIIV')).toEqual(['Gm7 C7', 'Gm7♭5 C7']); // bright first, dark also offered
     expect(syms('Cmaj7', 'Fmaj7', 'tritone')).toEqual(['G♭7']);
     expect(syms('Cmaj7', 'Fmaj7', 'iiSubV')).toEqual(['D♭m7 G♭7']);
   });
@@ -78,15 +78,15 @@ describe('each technique', () => {
   it('secondary ii–V numerals', () => {
     expect(get('Cmaj7', 'Fmaj7', 'secIIV')[0].romanNumerals).toEqual(['ii7/IV', 'V7/IV']);
     expect(get('Cmaj7', 'Am7', 'secIIV')[0].romanNumerals).toEqual(['iiø7/vi', 'V7/vi']);
-    expect(syms('Cmaj7', 'G7', 'secIIV')).toEqual(['Am7 D7']);
+    expect(syms('Cmaj7', 'G7', 'secIIV')).toEqual(['Am7 D7', 'Am7♭5 D7']);
   });
   it('secondary ii–V matches the Move tab for every diatonic target in 12 keys', () => {
     for (const mode of ['major', 'minor'] as HomeMode[]) for (let pc = 0; pc < 12; pc++) {
       const key = homeKey(pc, mode), H = homeChords(key);
       H.filter(c => c.landable).forEach(t => {
         const got = passingChords(makeChord(key.tonic, 'sus4'), fromChart(t), key, ['secIIV']).map(s => s.chords.map(c => names(c.tones)).join(' | '));
-        // same chords as Phase 0's approach(): dark then bright for minor targets, bright otherwise
-        const want = (t.quality === 'm7' ? (['dark', 'bright'] as const) : (['bright'] as const)).map(fl => { const a = approach(t, fl)!; return names(a.ii.tones) + ' | ' + names(a.V.tones); });
+        // same chords as Phase 0's approach(): dark then bright for minor targets, bright then dark otherwise
+        const want = (t.quality === 'm7' ? (['dark', 'bright'] as const) : (['bright', 'dark'] as const)).map(fl => { const a = approach(t, fl)!; return names(a.ii.tones) + ' | ' + names(a.V.tones); });
         expect(got, `${t.symbol} in ${mode} ${pc}`).toEqual(want);
       });
     }

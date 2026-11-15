@@ -31,7 +31,7 @@ export function scaleStep(m: ModeDetail): ScaleStep {
   return { kind: 'scale', mode: m, names: seq, seq: seq.map(pcOf) };
 }
 
-export interface ProgItem { d: number; a: boolean }
+export interface ProgItem { d: number; a: boolean; /** color of this item's 2-5; defaults to the global one */ flavor?: Flavor }
 export interface StepSource {
   px: 'move' | 'prog' | 'random' | 'mode';
   pc: PitchClass;
@@ -55,7 +55,7 @@ export function buildSteps(s: StepSource): Step[] {
   if (s.px === 'prog') {
     const out: Step[] = [];
     s.prog.forEach(p => {
-      const tc = H[p.d], ap = p.a ? approach(tc, s.flavor) : null;
+      const tc = H[p.d], ap = p.a ? approach(tc, p.flavor ?? s.flavor) : null;
       if (ap) out.push(mkStep(ap.ii, 'ii / ' + tc.rn), mkStep(ap.V, 'V / ' + tc.rn));
       out.push(mkStep(tc, tc.rn));
     });

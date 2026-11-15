@@ -4,7 +4,7 @@ Add theory or product questions here instead of guessing. Ralph answers them in 
 
 ## From the Phase 0 port (behavior kept exactly as it was; nothing guessed)
 
-1. **"2‑5 into every chord" button (Progression tab) does not work in the old app.**
+1. **FIXED (Progression rebuild).** "2‑5 into every chord" button (Progression tab) did not work in the old app.
    Its click handler shares the name `pall` with Play it's "All 12 keys" switch, so the button
    flips that switch instead. Ported as-is. Fix it? (Expected: turn the 2‑5 on/off for every
    landable chord in the progression.)
@@ -21,8 +21,8 @@ Add theory or product questions here instead of guessing. Ralph answers them in 
 ## From Phase 1 (Passing engine). Each item is built with the default shown; say if it should change.
 
 Theory rules
-6. **Secondary ii–V into a major chord:** only the bright one (Gm7–C7 → Fmaj7) is offered. Also offer
-   the minor ii–V into major (Gm7♭5–C7 → Fmaj7)?
+6. **DECIDED.** The 2-5 is always offered both bright and dark (Gm7–C7 and Gm7♭5–C7 → Fmaj7), because
+   the old Bright/Dark switch allowed both and the merged Move tab replaces that switch.
 7. **Diminished passing going down** (Em7 – E♭°7 – Dm7) is not offered; SPEC only names ♯°7 going up.
    Add it?
 8. **Common-tone °7** is only offered into major and dominant chords (C°7 → Cmaj7), not minor. OK?
@@ -59,3 +59,15 @@ Numbers and labels (tunable data, not theory)
     is measured from the home key (♭VImaj7, ♯iv°7, ♭ii7). IV over V is labeled V9sus4. OK?
 24. **Genre extensions / voicing types / chords per bar** are stored but not used yet (Phase 2–3).
     Cards show plain 7th chords in a simple root-position voicing for now.
+
+## From merging Move + Passing and rebuilding Progression
+25. **Play it** can only check chords it has a scale for: chords of the key and their 2-5s. If you
+    pick another passing (tritone sub, diminished …) on Move or Progression, Play it falls back to
+    the 2-5 for "The move" and skips that passing in "Progression". Typed chords are skipped too.
+    Checking any chord comes with the voicing engine in Phase 2. OK until then?
+26. **The chosen way sticks** when you change the chords: if you picked "Tritone sub", the next pair
+    also opens on its tritone sub (when it has one). Prefer it to reset to the top-ranked way?
+27. **Line cliché** is not offered inside a progression (it replaces the chord before instead of
+    sitting between two chords). It is on the Move tab.
+28. **New chords in a progression start with no passing**; you add one with "+ passing". Presets
+    still load with a 2-5 into every chord.
