@@ -1,11 +1,11 @@
 import { letterIndex, mod, pcOf, spell } from './notes';
 import type { Chord, Note, VoiceRole, Voicing } from './types';
 
-type Slot = 'R' | '3' | '5' | '7' | '9';
+type Slot = 'R' | '3' | '5' | '7' | '9' | '13';
 /** Label for a chord degree by its semitones above the root. */
 const IVN: Record<string, Record<number, string>> = {
   '3': { 3: '♭3', 4: '3' }, '5': { 6: '♭5', 7: '5', 8: '♯5' }, '7': { 9: '𝄫7', 10: '♭7', 11: '7' },
-  '9': { 1: '♭9', 2: '9', 3: '♯9' }, '11': { 5: '11', 6: '♯11' },
+  '9': { 1: '♭9', 2: '9', 3: '♯9' }, '11': { 5: '11', 6: '♯11' }, '13': { 8: '♭13', 9: '13' },
 };
 export interface VoicingDef { group: 'Basic' | 'Jazz'; name: string; sub: string; slots: Slot[]; /** lowest MIDI note the bottom voice may take */ base: number }
 export const VDEF: VoicingDef[] = [
@@ -23,20 +23,26 @@ export const VDEF: VoicingDef[] = [
 
 /**
  * The note for each slot. The 9th is the 2nd note of the chord's mode, except that a ♭9
- * is only kept on dominant 7 chords; every other chord gets a natural 9.
+ * is only kept on dominant 7 chords; every other chord gets a natural 9. The 13th is the 6th note
+ * of the mode (used by the rootless voicings of dominant chords).
  */
 export function degNotes(c: Pick<Chord, 'tones' | 'quality' | 'mode'>): Record<Slot, Note> {
   const t = c.tones, r = pcOf(t[0]);
   let nine = c.mode.notes[1];
   if (mod(pcOf(nine) - r, 12) === 1 && c.quality !== '7') nine = spell((letterIndex(t[0]) + 1) % 7, (r + 2) % 12);
-  return { R: t[0], '3': t[1], '5': t[2], '7': t[3], '9': nine };
+  return { R: t[0], '3': t[1], '5': t[2], '7': t[3], '9': nine, '13': c.mode.notes[5] };
 }
 
-/** Stack the slots upward from the lowest note at or above `def.base`. */
+/**
+ * Stack the slots upward from the lowest note at or above `def.base`.
+ * Rootless voicings of a dominant 7 take the 13 in place of the 5 (Levine: A = 3-13-7-9, B = 7-9-3-13).
+ */
 export function buildVoicing(c: Pick<Chord, 'tones' | 'quality' | 'mode'>, def: VoicingDef): Voicing {
   const D = degNotes(c), r = pcOf(c.tones[0]);
+  const dom13 = c.quality === '7' && def.name.startsWith('Rootless');
+  const slots: Slot[] = dom13 ? def.slots.map(k => (k === '5' ? '13' : k)) : def.slots;
   let prev = -1;
-  const out = def.slots.map((k, i) => {
+  const out = slots.map((k, i) => {
     const n = D[k], pc = pcOf(n);
     let m: number;
     if (i === 0) m = def.base + mod(pc - def.base, 12);
@@ -46,7 +52,7 @@ export function buildVoicing(c: Pick<Chord, 'tones' | 'quality' | 'mode'>, def: 
     const role: VoiceRole = k === 'R' ? 'root' : k === '3' || k === '7' ? 'guide' : 'color';
     return { midi: m, note: n, label: k === 'R' ? 'R' : IVN[k]?.[semi] ?? k, role };
   });
-  return { group: def.group, name: def.name, sub: def.sub, notes: out };
+  return { group: def.group, name: def.name, sub: dom13 ? def.sub.replace('5', '13') : def.sub, notes: out };
 }
 export const allVoicings = (c: Pick<Chord, 'tones' | 'quality' | 'mode'>): Voicing[] => VDEF.map(d => buildVoicing(c, d));
 
