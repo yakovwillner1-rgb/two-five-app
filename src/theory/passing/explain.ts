@@ -12,11 +12,11 @@ import type { VoiceMove } from './types';
 export function voiceMoves(last: PChord, to: PChord): VoiceMove[] {
   const order = [3, 1, 2, 0, 4, 5, 6].filter(i => i < last.tones.length).map(i => last.tones[i]);
   const find = (x: Note, d: number): Note | undefined => to.tones.find(y => mod(pcOf(y) - pcOf(x), 12) === mod(d, 12));
-  const out: VoiceMove[] = [], used = new Set<Note>();
+  const out: VoiceMove[] = [], used = new Set<number>();
   const add = (x: Note, d: number) => {
-    if (used.has(x)) return;
+    if (used.has(pcOf(x))) return; // each pitch once, even when a chord doubles it
     const y = find(x, d);
-    if (y) { used.add(x); out.push({ from: x, to: y, fromChord: last.symbol, toChord: to.symbol, semis: d }); }
+    if (y) { used.add(pcOf(x)); out.push({ from: x, to: y, fromChord: last.symbol, toChord: to.symbol, semis: d }); }
   };
   /* a note that TO also contains would rather stay, so notes that have to move go first */
   const inTo = (x: Note): boolean => to.tones.some(y => pcOf(y) === pcOf(x));

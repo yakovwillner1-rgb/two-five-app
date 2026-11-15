@@ -13,6 +13,7 @@ const isMinor = (c: PChord): boolean => famOfKind(c) === 'min';
 const majorish = (c: PChord): boolean => ['maj', 'aug', 'sus'].includes(famOfKind(c));
 const rns = (cs: PChord[], key: Key): string[] => cs.map(c => romanNumeral(c, key));
 const names = (cs: PChord[]): string => cs.map(c => c.symbol).join(' → ');
+const listOf = (xs: string[]): string => (xs.length > 1 ? xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1] : xs.join(''));
 const plain = (c: PChord): PChord => (c.bass ? makeChord(c.root, c.kind) : c);
 
 /** V7 of TO. */
@@ -219,8 +220,8 @@ const upperStruct: Technique = (_from, to, _key, ctx) => {
     const c = upperStructure(vRoot, u.variant), tri = c.upper!;
     return {
       variant: u.variant, variantLabel: u.label, chords: [c], romanNumerals: ['V' + u.kind + ctx.of],
-      fn: `${c.symbol} is the V7 of ${to.symbol} played as a ${fmt(tri.root)} major triad over the ${fmt(vRoot)}7 shell (${[c.tones[0], c.tones[1], c.tones[2]].map(fmt).join(' ')}).`,
-      pull: `The shell's tritone resolves as usual; the triad on top adds ${u.labels.filter(l => l !== 'R' && l !== '5' && l !== '♭7').join(' and ')} as color.`,
+      fn: `${c.symbol} is the V7 of ${to.symbol} played as ${/^[AEF]/.test(tri.root.letter) ? 'an' : 'a'} ${fmt(tri.root)} major triad over the ${fmt(vRoot)}7 shell (${[c.tones[0], c.tones[1], c.tones[2]].map(fmt).join(' ')}).`,
+      pull: `The shell's tritone resolves as usual; the triad on top adds ${listOf(u.labels.filter(l => l !== 'R' && l !== '5' && l !== '♭7'))} as color.`,
     };
   });
 };

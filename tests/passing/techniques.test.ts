@@ -177,25 +177,24 @@ describe('every suggestion', () => {
     expect(new Set(everything.map(x => x.s.techniqueId)).size).toBe(TECHNIQUE_IDS.length - 0);
   });
   it('has chords, matching numerals, catalogue data and at most 4 bullets', () => {
+    const bad: string[] = [];
     for (const { s, f, t } of everything) {
-      const where = `${s.techniqueId}.${s.variant} ${f.symbol}→${t.symbol}`;
-      expect(s.chords.length, where).toBeGreaterThan(0);
-      expect(s.romanNumerals.length, where).toBe(s.chords.length);
-      expect(VARIANTS[s.techniqueId + '.' + s.variant], where).toBeDefined();
-      expect(s.tension).toBeGreaterThanOrEqual(0); expect(s.tension).toBeLessThanOrEqual(1);
-      expect(s.explanation.length, where).toBeGreaterThanOrEqual(3);
-      expect(s.explanation.length, where).toBeLessThanOrEqual(4);
-      s.explanation.forEach(b => expect(b, where).not.toMatch(/undefined|NaN|\[object/));
-      expect(s.chords[s.chords.length - 1].symbol, where).not.toBe(t.symbol);
+      const ok = s.chords.length > 0 && s.romanNumerals.length === s.chords.length && !!VARIANTS[s.techniqueId + '.' + s.variant]
+        && s.tension >= 0 && s.tension <= 1 && s.explanation.length >= 3 && s.explanation.length <= 4
+        && !s.explanation.some(b => /undefined|NaN|\[object/.test(b)) && s.chords[s.chords.length - 1].symbol !== t.symbol;
+      if (!ok) bad.push(`${s.techniqueId}.${s.variant} ${f.symbol}→${t.symbol}`);
     }
+    expect(bad).toEqual([]);
   });
   it('never shows an awkward chord root (double accidental, C♭, F♭, E♯, B♯) outside the strict-theory techniques', () => {
     const strict = new Set(['secDom', 'secIIV', 'dimPass', 'dimCT', 'lineCliche', 'susSub', 'upperStruct', 'turnaround', 'borrowed', 'gospelWalk']);
+    const bad: string[] = [];
     for (const { s, f, t } of everything) {
       if (strict.has(s.techniqueId)) continue;
       if (/^Cb|^Fb|^E#|^B#/.test(noteName(t.root))) continue; // TO itself has such a root (e.g. F♭maj7 in A♭ minor)
-      for (const c of s.chords) expect(noteName(c.root), `${s.techniqueId} ${f.symbol}→${t.symbol}`).not.toMatch(/##|bb|^Cb|^Fb|^E#|^B#/);
+      for (const c of s.chords) if (/##|bb|^Cb|^Fb|^E#|^B#/.test(noteName(c.root))) bad.push(`${s.techniqueId} ${f.symbol}→${t.symbol}: ${c.symbol}`);
     }
+    expect(bad).toEqual([]);
   });
   it('outside notes are exactly the chord notes that are not in the home key', () => {
     const bad: string[] = [];
@@ -230,6 +229,13 @@ describe('explanations', () => {
   });
   it('says when nothing is borrowed', () => {
     expect(get('Cmaj7', 'Cmaj7', 'turnaround')[0].explanation[2]).toBe('Every note is inside C major.');
+  });
+  it('upper structure wording and no doubled voice-leading moves', () => {
+    const s = get('Fmaj7', 'Cmaj7', 'upperStruct');
+    expect(s[0].explanation[0]).toBe('G13♯11 is the V7 of Cmaj7 played as an A major triad over the G7 shell (G B F).');
+    expect(s[0].explanation[3]).toContain('adds 9, ♯11 and 13 as color');
+    expect(s[2].explanation[1]).toBe('Voice leading: F in G7♯9 falls a half step to E in Cmaj7; B♭ in G7♯9 rises a half step to B in Cmaj7.');
+    for (const x of s) expect(new Set(x.voiceLeading.map(m => pcOf(m.from))).size).toBe(x.voiceLeading.length);
   });
   it('tritone sub and common-tone °7', () => {
     expect(ex('Cmaj7', 'Fmaj7', 'tritone')[0]).toBe('G♭7 is the tritone sub of C7, the V7 of Fmaj7: a dominant a tritone away that shares its 3rd and 7th.');

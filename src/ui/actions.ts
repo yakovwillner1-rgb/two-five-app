@@ -6,14 +6,17 @@ import { HOME, approach, keyName } from '../theory/home';
 import { mod } from '../theory/notes';
 import { TYPES } from '../theory/scales';
 import type { Family, Flavor, HomeMode, ScaleType } from '../theory/types';
+import type { Genre } from '../data/styles';
+import type { Feel } from '../data/techniques';
 import { VOICES, cache, chordByKey } from './pieces';
 import { drawPlay, resetPL } from './play';
 import { hidePop, pickerJustClosed, showPicker, showPop } from './popover';
 import { render, setDir } from './render';
+import { playCard, playCardChord } from './views/pass';
 import { newEar, newQ } from './views/quiz';
 
 /* Tabs where swiping / arrow keys change the key. */
-const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes'];
+const SWIPE: Tab[] = ['move', 'pass', 'map', 'chart', 'prog', 'modes'];
 
 function step(n: number): void {
   if (rootCtx()) S.mroot = mod(modeRootPc() + n, 12); else S.pc = mod(S.pc + n, 12);
@@ -76,6 +79,14 @@ function onClick(e: MouseEvent): void {
     case 'mapopen': S.to = +d.d!; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
     case 'chart': S.chart = d.v as ScaleType; stopAll(); render(); break;
     case 'row': { const T = TYPES[S.chart], c = chordInfo(keyName(S.pc, T.keys), S.chart, +d.d!); playSeq([{ t: 0, dur: 2.6, tones: c.tones, id: 'c' + d.d }], 'x'); break; }
+    case 'pfrom': S.pfrom = +d.d!; S.pfromSym = null; stopAll(); render(); break;
+    case 'pto': S.pto = +d.d!; S.ptoSym = null; stopAll(); render(); break;
+    case 'psymx': if (d.f === 'from') S.pfromSym = null; else S.ptoSym = null; stopAll(); render(); break;
+    case 'pgenre': S.pgenre = d.v as Genre; stopAll(); render(); break;
+    case 'pfeel': S.pfeel = d.v as Feel; stopAll(); render(); break;
+    case 'pshow': S.pshowAll = !S.pshowAll; stopAll(); render(); break;
+    case 'pplay': playCard(+d.i!); break;
+    case 'pcchord': playCardChord(+d.i!, +d.j!); break;
     case 'qshow': S.quiz!.rev = true; render(); break;
     case 'qhear': playChords(cache.qz, ['qa0', 'qa1', 'qa2']); break;
     case 'qok': case 'qno': S.score.t++; if (a === 'qok') S.score.r++; stopAll(); newQ(); render(); break;
@@ -83,9 +94,11 @@ function onClick(e: MouseEvent): void {
 }
 
 function onKey(e: KeyboardEvent): void {
+  const t = e.target as HTMLElement;
+  /* typing in a text box: no shortcuts (Esc leaves the box) */
+  if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') { if (e.key === 'Escape') t.blur(); return; }
   if (e.key === 'Escape') { hidePop(); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const t = e.target as Element;
   if (e.code === 'Space' && t.tagName !== 'BUTTON') { e.preventDefault(); togglePlay(); return; }
   if (t.closest && t.closest('#pop')) return;
   if (e.key === 'ArrowRight' && SWIPE.includes(S.tab)) { e.preventDefault(); step(1); }
@@ -106,6 +119,11 @@ export function initActions(): void {
   document.addEventListener('keydown', onKey);
   document.addEventListener('change', e => {
     const t = e.target as HTMLSelectElement;
+    if (t.classList.contains('psym')) {
+      const v = (t as unknown as HTMLInputElement).value.trim() || null;
+      if (t.dataset.f === 'from') S.pfromSym = v; else S.ptoSym = v;
+      stopAll(); render(); return;
+    }
     if (!t.classList.contains('soundsel')) return;
     stopAll(); S.soundOut = t.value || null; save(); bindMidi();
   });
