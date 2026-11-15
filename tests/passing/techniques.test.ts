@@ -198,11 +198,13 @@ describe('every suggestion', () => {
     }
   });
   it('outside notes are exactly the chord notes that are not in the home key', () => {
-    for (const { s, key } of everything) {
-      const home = homePcs(key), want = new Set(s.chords.flatMap(c => c.tones.map(pcOf)).filter(pc => !home.has(pc)));
-      expect(new Set(s.outsideNotes.map(pcOf))).toEqual(want);
-      expect(s.outsideNotes.length).toBe(want.size);
+    const bad: string[] = [];
+    for (const { s, key, f, t } of everything) {
+      const home = homePcs(key), want = [...new Set(s.chords.flatMap(c => c.tones.map(pcOf)).filter(pc => !home.has(pc)))].sort().join();
+      const got = s.outsideNotes.map(pcOf).sort().join();
+      if (got !== want) bad.push(`${s.techniqueId} ${f.symbol}→${t.symbol}: ${got} vs ${want}`);
     }
+    expect(bad).toEqual([]);
   });
   it('is deterministic: same input, same output', () => {
     const key = homeKey(0, 'major');
