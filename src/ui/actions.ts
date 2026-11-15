@@ -14,12 +14,13 @@ import { drawPlay, releaseAll, resetPL } from './play';
 import { findWay, progChord } from './passing';
 import { hidePop, pickerJustClosed, showPicker, showPop, showSheet } from './popover';
 import { render, setDir } from './render';
+import { drawLead, leadAction, leadTyped } from './views/lead';
 import { listenAction } from './views/listen';
 import { extPickerHTML, viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
 
 /* Tabs where swiping / arrow keys change the key. */
-const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes', 'ext'];
+const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes', 'ext', 'lead'];
 
 function step(n: number): void {
   if (rootCtx()) S.mroot = mod(modeRootPc() + n, 12); else S.pc = mod(S.pc + n, 12);
@@ -31,6 +32,11 @@ function onClick(e: MouseEvent): void {
   if (!b || (b as HTMLButtonElement).disabled) return;
   const a = b.dataset.a, d = b.dataset, H = () => curChords();
   if (S.tab === 'listen' && a && listenAction(a, d)) { stopAll(); render(); return; }
+  if (S.tab === 'lead' && a) {
+    const r = leadAction(a, d);
+    if (r === 'render') { stopAll(); render(); } else if (r === 'draw') { drawLead(); save(); }
+    if (r) return;
+  }
   switch (a) {
     case 'mode': setMode(d.v as HomeMode); stopAll(); render(); break;
     case 'kprev': step(-1); break;
@@ -133,6 +139,7 @@ export function initActions(): void {
     const t = e.target as HTMLSelectElement;
     if (t.classList.contains('psym')) {
       const v = (t as unknown as HTMLInputElement).value.trim() || null;
+      if (t.dataset.f === 'lead' || t.dataset.f === 'mel') { leadTyped(t.dataset.f, v); stopAll(); render(); return; }
       if (t.dataset.f === 'prog') {
         if (!v) return;
         const c = parseChord(v);

@@ -113,3 +113,31 @@ Numbers and labels (tunable data, not theory)
 43. **Key detection** only suggests another key of the same mode when at least two more of the
     heard chords fit it. It never switches by itself.
 
+
+## From Phase 2 (Melody on top)
+44. **Dominant with no next chord** is read as the V of the key chord a fifth below (G7 in C →
+    Mixolydian, E7 in C → ♭9 ♭13). The Melody tab has no "next chord" picker yet. Add one?
+45. **Tension substitution:** 9 replaces the root; 11, ♯11, 13, ♭13 replace the 5th. Some books put
+    the 11 in place of the 3rd on minor chords. Keep mine?
+46. **Barry Harris:** dominants are voiced as the m6 on their 5th (G7 = Dm6), only for plain 7, 9
+    and 13 chords. Altered dominants get no Barry Harris voicing. The maj7's own 7th counts as a
+    passing (diminished) note, as he taught. OK?
+47. **Cluster** = 3rd, 7th, 9th under the melody, only shown when it has a 2nd inside and differs
+    from the close voicing. Is that the neo-soul cluster you mean, or do you want specific shapes?
+48. **Half step right under the melody** (C on top of Cmaj7 gives B–C at the top). Arrangers often
+    swap the 7th for the 6th there. The app leaves it and does not warn. Add the swap?
+49. **Avoid notes still get voicings** (with a warning and fixes), so you can hear the clash. Hide
+    them instead?
+50. **Rootless voicings start at D3 or higher** (as in the voicing sheet) and are left out when the
+    melody is not above them. Spread voicings put the root in C2–B2. Right registers for you?
+51. **Low-interval limit** covers only 3rds (E2). Add limits for 2nds and tritones?
+52. **Ranking with no previous voicing** is a fixed order by type. Should genre/feel order them
+    (SPEC lists "preferred voicing types" per style, not built yet)?
+53. **Play it → Voicings** checks the kept notes bottom to top in any octave, always exact. Want an
+    "any octave of the left hand" or looser mode?
+54. **Existing voicing sheet:** dominant Rootless A/B now use the 13 instead of the 5 (SPEC). On the
+    V of a minor key that is the ♭13 (E7: D F G♯ C). OK, or natural 13 there?
+55. **Upper structures** use major triads only (II, ♭III, ♭V, ♭VI, VI). Add the minor ones
+    (i, ♭ii, ♭iii, ♯iv)?
+56. **Tab bar** now has 11 tabs; on phones "Progression" is shortened to "Chain". Better word, or
+    group some tabs?

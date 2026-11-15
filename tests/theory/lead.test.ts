@@ -307,6 +307,8 @@ describe('melody check', () => {
     expect(color.length).toBeGreaterThan(0);
     color.forEach(f => expect(f.chord!.labels).toContain('♭9'));
     expect(m.fixes.filter(f => f.kind === 'move').map(f => f.midi)).toEqual([p('G5'), p('A5')]);
+    /* the same with no next chord given: G7 in C is read as the V of Cmaj7 */
+    expect(melodyCheck(ch('G7'), p('Ab5'), null, C).fixes.map(f => f.text)).toEqual(m.fixes.map(f => f.text));
   });
   it('spelling of the melody note follows the chord (A♭ = ♭9 of G7, G♯ = 3rd of E7, B𝄫 = ♭9 of A♭7)', () => {
     expect(melodyCheck(ch('G7b9'), 68, null, C).note).toEqual({ letter: 'A', acc: -1 });

@@ -36,12 +36,13 @@ export interface LeadVoicing {
  * going down a fifth to the chord of the key on that root, when the key has one.
  */
 export function leadScale(c: PChord, next: PChord | null, key: Key): ChordScale {
-  let nx = next;
-  if (!nx && famOfKind(c) === 'dom') {
-    const target = homeChords(key).find(h => mod(pcOf(h.root) - pcOf(c.root), 12) === 5);
-    if (target) nx = fromChart(target);
-  }
-  return scaleChoices(plainOf(c), nx, key)[0].scale;
+  return scaleChoices(plainOf(c), impliedNext(c, next, key), key)[0].scale;
+}
+/** The chord that follows, or for a dominant with none given, the chord of the key a fifth below it. */
+export function impliedNext(c: PChord, next: PChord | null, key: Key): PChord | null {
+  if (next || famOfKind(c) !== 'dom') return next;
+  const target = homeChords(key).find(h => mod(pcOf(h.root) - pcOf(c.root), 12) === 5);
+  return target ? fromChart(target) : null;
 }
 
 /* ---------- naming any note against a chord ---------- */
@@ -354,7 +355,7 @@ export function melodyCheck(c: PChord, melody: number, next: PChord | null, key:
   const fixes: MelodyFix[] = [];
   /* 1. the same chord with a color that holds the note */
   const seen = new Set<string>();
-  for (const o of extensionOptions(plainOf(c), next, key)) {
+  for (const o of extensionOptions(plainOf(c), impliedNext(c, next, key), key)) {
     const i = o.chord.tones.findIndex(t => pcOf(t) === mod(melody, 12));
     if (i < 0 || seen.has(o.chord.symbol) || fixes.filter(f => f.kind === 'color').length >= 2) continue;
     seen.add(o.chord.symbol);

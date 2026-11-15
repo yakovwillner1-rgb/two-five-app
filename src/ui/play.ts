@@ -3,8 +3,8 @@ import { tone } from '../audio/player';
 import { audio } from '../audio/synth';
 import { midi } from '../midi/input';
 import { S, curMode, curTitle } from '../state';
-import { fmt, mod, pcOf } from '../theory/notes';
-import { PlaySession, buildSteps, type Step } from '../theory/playcheck';
+import { fmt, mod, note, pcOf } from '../theory/notes';
+import { PlaySession, buildSteps, voicingStep, type Step } from '../theory/playcheck';
 import { cref, soundBox } from './pieces';
 import type { Flavor } from '../theory/types';
 import { moveModel } from './views/move';
@@ -14,6 +14,8 @@ import { progSteps } from './views/prog';
 const held = new Set<number>(), ptrNote: Record<number, number> = {};
 /** Set by the Listen tab: called whenever the held notes change while it is open. */
 export const heldHook = { changed: (_held: Set<number>): void => {} };
+/** Set by the Melody tab: called when the held notes change while it is open; `ghost` marks keys on the piano there. */
+export const leadHook = { changed: (_held: Set<number>): void => {}, ghost: (): Record<number, string> => ({}) };
 /** Let go of every held note (latched on-screen keys). */
 export function releaseAll(): void { [...held].forEach(noteOff); }
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
@@ -23,14 +25,16 @@ let chkT: ReturnType<typeof setTimeout> | undefined, flashT: ReturnType<typeof s
    Move or Progression tab is used with its color; other passing chords and typed chords are skipped
    until the voicing engine (Phase 2) can check them. */
 function steps(): Step[] {
+  /* voicings kept on the Melody tab: each one exactly as kept */
+  if (S.px === 'lead' && S.lkept.length) return S.lkept.map((k, i) => voicingStep(k.sym, `${k.name} · ${i + 1} of ${S.lkept.length}`, k.notes.map(n => ({ midi: n.m, name: fmt(note(n.n)) }))));
   const sel = S.px === 'move' ? moveModel().sel : null;
   const flavor: Flavor = sel?.techniqueId === 'secIIV' ? (sel.variant as Flavor) : S.flavor;
   const vias = S.px === 'prog' ? progSteps() : [];
   const prog = S.prog.map((p, i) => ({ p, via: vias[i]?.via })).filter(x => !x.p.sym)
     .map(({ p, via }) => ({ d: p.d, a: via?.techniqueId === 'secIIV' && via.chords.length === 2, flavor: via?.techniqueId === 'secIIV' ? (via.variant as Flavor) : undefined }));
-  return buildSteps({ px: S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor, prog, allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
+  return buildSteps({ px: S.px === 'lead' ? 'move' : S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor, prog, allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
 }
-const playSig = (): string => JSON.stringify([S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.way, S.pgenre, S.pfeel, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall]);
+const playSig = (): string => JSON.stringify([S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.way, S.pgenre, S.pfeel, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall, S.px === 'lead' ? S.lkept : 0]);
 export function resetPL(): void {
   clearTimeout(chkT);
   sig = playSig(); t0 = 0; elapsed = 0;
@@ -42,7 +46,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   const out = getOut();
   if (src === 'screen' && out) { screenOn.add(n); sendOn(out, n, 85); }
   else if (!out && (src === 'screen' || S.psound)) { const c = audio(); tone(n, c.currentTime + 0.01, 1.6, 0.15); }
-  if (S.tab !== 'play' || !ses) { held.add(n); if (S.tab === 'listen') heldHook.changed(held); return; }
+  if (S.tab !== 'play' || !ses) { held.add(n); if (S.tab === 'listen') heldHook.changed(held); if (S.tab === 'lead') leadHook.changed(held); return; }
   if (!ses.done && !t0) t0 = performance.now();
   const r = ses.noteOn(n);
   if (!r.counted) { drawPlay(); return; }
@@ -57,6 +61,7 @@ export function noteOff(n: number): void {
   held.delete(n);
   if (S.tab === 'play') drawKeys();
   if (S.tab === 'listen') heldHook.changed(held);
+  if (S.tab === 'lead') leadHook.changed(held);
 }
 function checkChord(): void {
   if (!ses) return;
@@ -101,10 +106,15 @@ function targetHTML(): string {
       <div class="eyebrow" style="margin-top:14px">Mode scale · up one octave and back down</div><div class="pbig">${fmt(m.notes[0])} ${m.name}</div>
       <p class="phow">Next note: <b>${fmt(st.names[P.si])}</b>. Any octave counts.</p>${pstats()}`;
   }
+  const chips = `<div class="pchips">${P.steps.map((x, i) => `<span class="pc ${i < P.i ? 'done' : i === P.i ? 'cur' : ''}">${x.kind === 'chord' ? x.chord.symbol : x.kind === 'voicing' ? x.symbol : ''}</span>`).join('<span class="arr">→</span>')}</div>`;
+  if (st.kind === 'voicing') {
+    return `${chips}<div class="eyebrow" style="margin-top:14px">${st.label}</div><div class="pbig">${st.symbol}</div>
+      <p class="phow">Play this voicing, bottom to top: <b>${st.names.join(' · ')}</b>. Any octave counts.</p>${pstats()}`;
+  }
   const c = st.chord;
   const how = S.pstrict ? `Play the <b>${st.voicing.name}</b> voicing, bottom to top: <b>${st.voicing.notes.map(x => fmt(x.note)).join(' · ')}</b>. Any octave counts.`
     : `Any voicing with the 3rd (<b>${fmt(c.tones[1])}</b>) and the 7th (<b>${fmt(c.tones[3])}</b>). Every other note has to fit ${fmt(c.mode.notes[0])} ${c.mode.name}.`;
-  return `<div class="pchips">${P.steps.map((x, i) => `<span class="pc ${i < P.i ? 'done' : i === P.i ? 'cur' : ''}">${x.kind === 'chord' ? x.chord.symbol : ''}</span>`).join('<span class="arr">→</span>')}</div>
+  return `${chips}
     <div class="eyebrow" style="margin-top:14px">${st.label}${S.px === 'random' ? ' · round ' + (P.rounds + 1) : ''}</div>
     <div class="pbig" data-chord="${cref(c)}">${c.symbol}</div><p class="phow">${how}</p>${pstats()}`;
 }
@@ -113,6 +123,7 @@ function pianoSVG(): string {
   const st = !P || P.done ? null : P.steps[P.i], ghost: Record<number, string> = {};
   if (S.phint && st && P) {
     if (st.kind === 'scale') { const nx = st.seq[P.si]; if (nx != null) ghost[60 + mod(nx - 60, 12)] = fmt(st.names[P.si]); }
+    else if (st.kind === 'voicing') { const up = st.midis[0] < lo ? Math.ceil((lo - st.midis[0]) / 12) * 12 : 0; st.midis.forEach((m, i) => { ghost[m + up] = st.names[i]; }); }
     else if (S.pstrict) st.voicing.notes.forEach(i => { let m = i.midi; while (m < lo) m += 12; ghost[m] = fmt(i.note); });
     else {
       const r = pcOf(st.chord.tones[0]), m = 55 + mod(r - 55, 12);
@@ -120,6 +131,7 @@ function pianoSVG(): string {
       st.chord.tones.forEach(n => { let x = pcOf(n) + 48; while (x <= prev || x < m) x += 12; prev = x; ghost[x] = fmt(n); });
     }
   }
+  if (S.tab === 'lead') Object.assign(ghost, leadHook.ghost());
   const col = { ok: '#59d18f', bad: 'var(--c5)', on: 'var(--c0)' }, NN = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'], name = (m: number) => NN[mod(m, 12)];
   const pos: Record<number, number> = {};
   let x = 0;
@@ -143,7 +155,7 @@ function pianoSVG(): string {
   return `<svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Piano keyboard">${w}${b}</svg>`;
 }
 export function drawMidi(): void { const M = document.getElementById('midibar'); if (M) M.innerHTML = midiHTML(); }
-export function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && (ses || S.tab === 'listen')) K.innerHTML = pianoSVG(); }
+export function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && (ses || S.tab === 'listen' || S.tab === 'lead')) K.innerHTML = pianoSVG(); }
 export function drawPlay(): void {
   if (S.tab !== 'play' || !ses) return;
   const T = document.getElementById('ptarget');
@@ -170,12 +182,12 @@ export function bindPiano(): void {
 export function viewPlay(): string {
   if (!ses || sig !== playSig()) resetPL();
   const sw = (a: string, on: boolean, l: string) => `<button class="switch" role="switch" data-a="${a}" aria-checked="${on}">${l}<i></i></button>`;
-  const src = S.px === 'move' ? 'Uses the move set on the Move tab.' : S.px === 'prog' ? 'Uses the chords on the Progression tab.' : S.px === 'mode' ? 'Uses the mode picked on the Modes tab. Change the root with the key button.' : 'Random 2‑5s into the chords of the home key.';
+  const src = S.px === 'move' ? 'Uses the move set on the Move tab.' : S.px === 'prog' ? 'Uses the chords on the Progression tab.' : S.px === 'mode' ? 'Uses the mode picked on the Modes tab. Change the root with the key button.' : S.px === 'lead' ? (S.lkept.length ? 'Uses the voicings you kept on the Melody tab, exactly as kept.' : 'No voicings kept yet: keep some on the Melody tab. Showing the move until then.') : 'Random 2‑5s into the chords of the home key.';
   return `<div class="stack">
    <div style="text-align:center"><div class="eyebrow">Play it · ${S.px === 'mode' ? 'Modes' : curTitle()}</div><h2>Play it and get <em>checked</em></h2></div>
    <div class="panel pctl">
-     <div class="pcrow"><span class="lbl">Practice</span><div class="seg" role="group" aria-label="What to practice">${([['move', 'The move'], ['prog', 'Progression'], ['random', 'Random 2‑5s'], ['mode', 'Mode scale']] as const).map(([k, l]) => `<button data-a="px" data-v="${k}" aria-pressed="${S.px === k}">${l}</button>`).join('')}</div></div>
-     ${S.px !== 'mode' ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
+     <div class="pcrow"><span class="lbl">Practice</span><div class="seg" role="group" aria-label="What to practice">${([['move', 'The move'], ['prog', 'Progression'], ['random', 'Random 2‑5s'], ['mode', 'Mode scale'], ['lead', 'Voicings']] as const).map(([k, l]) => `<button data-a="px" data-v="${k}" aria-pressed="${S.px === k}">${l}</button>`).join('')}</div></div>
+     ${S.px !== 'mode' && !(S.px === 'lead' && S.lkept.length) ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
      <div class="pcrow sws">${sw('phint', S.phint, 'Show the notes')}${S.px === 'random' ? sw('pall', S.pall, 'All 12 keys') : ''}${S.soundOut ? '' : sw('psound', S.psound, 'Sound for MIDI notes')}</div>
    </div>
    <div class="midibar" id="midibar"></div>

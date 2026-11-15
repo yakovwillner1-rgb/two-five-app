@@ -17,7 +17,18 @@ export interface ChordStep {
   scale: Set<PitchClass>;
 }
 export interface ScaleStep { kind: 'scale'; mode: ModeDetail; names: Note[]; seq: PitchClass[] }
-export type Step = ChordStep | ScaleStep;
+/** One exact voicing (from the Melody tab): these notes, bottom to top, in any octave. */
+export interface VoicingStep { kind: 'voicing'; symbol: string; label: string; midis: number[]; names: string[]; pcs: PitchClass[] }
+export type Step = ChordStep | ScaleStep | VoicingStep;
+export function voicingStep(symbol: string, label: string, notes: { midi: number; name: string }[]): VoicingStep {
+  const s = [...notes].sort((a, b) => a.midi - b.midi);
+  return { kind: 'voicing', symbol, label, midis: s.map(n => n.midi), names: s.map(n => n.name), pcs: s.map(n => mod(n.midi, 12)) };
+}
+/** The held notes, low to high, are exactly the voicing's notes (any octave). */
+export function voicingSatisfied(st: VoicingStep, held: Iterable<number>): boolean {
+  const pcs = [...held].sort((a, b) => a - b).map(m => mod(m, 12));
+  return pcs.length === st.pcs.length && pcs.every((x, i) => x === st.pcs[i]);
+}
 
 export function mkStep(c: Chord, label: string): ChordStep {
   const v = defaultVoicing(c), sc = new Set(c.mode.notes.map(pcOf));
@@ -122,7 +133,7 @@ export class PlaySession {
       } else { this.marks[n] = 'bad'; this.wrong++; }
       return { counted: true, mark: this.marks[n], needsChordCheck: false, finished: this.done };
     }
-    const ok = this.strict ? st.voicingPcs.includes(pc) : st.scale.has(pc);
+    const ok = st.kind === 'voicing' ? st.pcs.includes(pc) : this.strict ? st.voicingPcs.includes(pc) : st.scale.has(pc);
     this.marks[n] = ok ? 'ok' : 'bad';
     if (!ok) this.wrong++;
     return { counted: true, mark: this.marks[n], needsChordCheck: true, finished: false };
@@ -135,8 +146,8 @@ export class PlaySession {
 
   checkChord(): CheckResult {
     const st = this.steps[this.i];
-    if (!st || st.kind !== 'chord' || this.done) return 'none';
-    if (!chordSatisfied(st, this.held, this.strict)) return 'none';
+    if (!st || st.kind === 'scale' || this.done) return 'none';
+    if (!(st.kind === 'voicing' ? voicingSatisfied(st, this.held) : chordSatisfied(st, this.held, this.strict))) return 'none';
     this.i++;
     if (this.i >= this.steps.length) {
       if (this.nextRound) { this.rounds++; this.steps = this.nextRound(); this.i = 0; return 'newRound'; }
