@@ -207,7 +207,8 @@ play/export → drag into Logic → lines up with the original region.
 ## Checklist
 - [x] Phase 0 port + tests + Actions deploy + SW fix (on branch `phase-0-vite-ts-port`; live-site check
       pending: merge to `main` and set Pages source to "GitHub Actions")
-- [ ] Phase 1 Passing engine, styles, explanations
+- [x] Phase 1 Passing engine, styles, explanations (see `docs/OPEN_QUESTIONS.md` 6–24 for defaults
+      waiting on Ralph; IAC/Logic playback not checked with real devices)
 - [ ] Phase 2 Lead voicing
 - [ ] Phase 3 MIDI reharm
 - [ ] Phase 4 Practice + polish
