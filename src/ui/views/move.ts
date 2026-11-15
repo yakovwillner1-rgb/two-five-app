@@ -81,20 +81,23 @@ export function viewMove(): string {
     detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', S.toSym && !m.badTo ? null : m.H[S.to]),
   ].join('');
   cache.chords.mf = { tones: playTones(m.from) };
+  /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
+  const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
+  const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('') : '';
   return `<div class="stack">${tip}
    <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2>Get from <em>${m.from.symbol}</em> to <em>${m.to.symbol}</em></h2></div>
    <div class="panel pick">
      <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}</div>
      <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}</div>
    </div>
-   <div class="panel pstyle">
+   <div class="pathx">${path}</div>
+   <div class="panel wayspanel">
+     <div class="waysh"><h3 style="margin:0">Ways to get there</h3><span class="small">${m.shown.length} for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()} first. Tap one to use it.</span></div>
      <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
      <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
+     <div class="ways">${ways || '<div class="empty">No passing chords for this pair in this style. Try another genre or target.</div>'}</div>${hiddenNote}
    </div>
-   <div><div class="lbl">${m.shown.length} way${m.shown.length === 1 ? '' : 's'} to get there · most typical for ${g.label}, ${FEEL_LABELS[S.pfeel].toLowerCase()} first</div>
-     <div class="ways">${ways || '<div class="empty">No passing chords for this pair in this style. Try another genre or target.</div>'}</div>${hiddenNote}</div>
-   <div class="pathx">${path}</div>
-   ${s ? `<div class="duo"><div class="panel why"><h3>What's happening · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}</h3>${s.explanation.map(l => `<p>${l}</p>`).join('')}</div>
+   ${s ? `<div class="duo"><div class="panel why"><h3>What's happening · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}</h3>${why}</div>
    <div class="panel"><h3>Voice‑leading lines</h3><p class="small" style="margin:0">The 3rds and 7ths move by small steps. Hum these and you hear the whole move.</p>
      <div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div></div></div>` : ''}
    <div class="cards">${cards}</div>

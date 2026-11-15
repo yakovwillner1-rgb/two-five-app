@@ -399,3 +399,10 @@ main{flex:1;padding:22px 0 40px}
 .viaadd{min-height:40px;padding:0 14px;border-radius:999px;border:1px dashed color-mix(in srgb,var(--gold) 60%,var(--line));color:var(--gold);font-weight:700;font-size:.82rem;white-space:nowrap}
 .viaadd:hover{background:color-mix(in srgb,var(--gold) 10%,transparent)}
 .bar .tog{max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wayspanel{display:flex;flex-direction:column;gap:12px}
+.waysh{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.wayspanel .ways{margin-top:0}
+.wayspanel .way{background:var(--panel2)}
+.wayspanel .way[aria-pressed="true"]{background:color-mix(in srgb,var(--gold) 14%,var(--panel2))}
+.whyl{display:block;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:1px}
+.why p:first-of-type{font-size:1rem}
