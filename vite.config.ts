@@ -28,7 +28,7 @@ function serviceWorker(): Plugin {
       files.forEach(f => { h.update(f); h.update(readFileSync(join(outDir, f))); });
       const hash = h.digest('hex').slice(0, 10);
       const precache = ['./', ...files.map(f => './' + f)];
-      const sw = readFileSync(resolve(__dirname, 'src/sw.js'), 'utf8')
+      const sw = readFileSync(resolve(import.meta.dirname, 'src/sw.js'), 'utf8')
         .replace('__BUILD_HASH__', hash)
         .replace('__PRECACHE__', JSON.stringify(precache));
       writeFileSync(join(outDir, 'sw.js'), sw);
