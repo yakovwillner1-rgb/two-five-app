@@ -17,10 +17,12 @@ import { viewModes } from './views/modes';
 import { moveModel, viewMove } from './views/move';
 import { progBars, viewProg } from './views/prog';
 import { viewQuiz } from './views/quiz';
+import { viewReharm } from './views/reharm';
 
 const ICONS: Record<Tab, string> = {
   move: '<path d="M4 12h13M13 6l6 6-6 6"/>',
   listen: '<path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4"/>',
+  reharm: '<path d="M4 7h11l-3-3M20 17H9l3 3"/><circle cx="18.5" cy="7" r="1.5"/><circle cx="5.5" cy="17" r="1.5"/>',
   lead: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
   play: '<rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M7 5v8M12 5v8M17 5v8M7 13v6M12 13v6M17 13v6"/>',
   prog: '<rect x="3" y="6" width="5" height="12" rx="1.2"/><rect x="10" y="6" width="5" height="12" rx="1.2"/><rect x="17" y="6" width="4" height="12" rx="1.2"/>',
@@ -32,10 +34,10 @@ const ICONS: Record<Tab, string> = {
   guide: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
 };
 const ico = (k: Tab): string => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
-const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['lead', 'Melody'], ['listen', 'Listen'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
-export const TITLES: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody on top', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', ext: 'Extensions', chart: 'Charts', guide: 'Guide' };
-const SHORT: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody', move: 'Move', prog: 'Prog', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
-const VIEWS: Record<Tab, () => string> = { play: viewPlay, listen: viewListen, lead: viewLead, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, ext: viewExt, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
+const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['lead', 'Melody'], ['reharm', 'Reharm'], ['listen', 'Listen'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
+export const TITLES: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody on top', reharm: 'Reharm', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', ext: 'Extensions', chart: 'Charts', guide: 'Guide' };
+const SHORT: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody', reharm: 'Reharm', move: 'Move', prog: 'Prog', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
+const VIEWS: Record<Tab, () => string> = { play: viewPlay, listen: viewListen, lead: viewLead, reharm: viewReharm, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, ext: viewExt, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
 let dir = '';
@@ -54,10 +56,13 @@ function renderShell(): void {
   $('kbtn').setAttribute('aria-label', md ? 'Pick root' : 'Pick home key');
   $('mode').innerHTML = md ? '' : `<div class="seg" role="group" aria-label="Major or minor key">${(Object.keys(HOME) as HomeMode[]).map(k => `<button data-a="mode" data-v="${k}" aria-pressed="${S.mode === k}">${HOME[k].label}</button>`).join('')}</div>`;
   $('htitle').textContent = TITLES[S.tab];
+  /* the phone tab bar scrolls sideways: keep the current tab in view */
+  const cur = $('tabbar').querySelector<HTMLElement>('[aria-current]');
+  if (cur && cur.offsetParent) $('tabbar').scrollLeft = Math.max(0, cur.offsetLeft - ($('tabbar').clientWidth - cur.offsetWidth) / 2);
 }
 function renderPlayer(): void {
   const t = S.tab, pl = $('player');
-  if (t === 'guide' || t === 'chart' || t === 'play' || t === 'listen' || t === 'lead' || t === 'ext') { pl.hidden = true; return; }
+  if (t === 'guide' || t === 'chart' || t === 'play' || t === 'listen' || t === 'lead' || t === 'reharm' || t === 'ext') { pl.hidden = true; return; }
   pl.hidden = false;
   let lab = '', now = '';
   if (t === 'move') { const m = moveModel(); lab = m.sel ? m.sel.name : 'The move'; now = [...(m.sel?.replacesFrom ? [] : [m.from]), ...(m.sel?.chords ?? []), m.to].map(c => c.symbol).join(' → '); }
