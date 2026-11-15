@@ -123,11 +123,23 @@ export function scaleChoices(c: PChord, next: PChord | null, key: Key): ScaleCho
 }
 
 /* ---- extended chords and how their tensions move on ---- */
-const CORE = new Set(['R', '3', '♭3', '5', '♭5', '♯5', '7', '♭7', '𝄫7', '4']);
+/** The plain chord an extended kind is built on: m9 → m7, 13♯11 → 7, 6/9 → maj7. Others are their own base. */
+const BASE: Partial<Record<KindId, KindId>> = {};
+(Object.keys(SCALES) as ScaleId[]).forEach(id => SCALES[id].options.forEach(k => { if (!(k in BASE)) BASE[k] = SCALES[id].kind; }));
+export const baseKind = (k: KindId): KindId => BASE[k] ?? k;
+/** The chord without its extensions (same root and bass). */
+export const plainOf = (c: PChord): PChord => (c.upper || baseKind(c.kind) === c.kind ? c : makeChord(c.root, baseKind(c.kind), c.bass));
+/** The notes a chord adds on top of root, 3rd, 5th and 7th. */
+export function chordTensions(c: PChord): { note: Note; label: string }[] {
+  const out: { note: Note; label: string }[] = [];
+  c.tones.forEach((note, i) => { if (!CORE.has(c.labels[i]) && !(c.upper && i < 3)) out.push({ note, label: c.labels[i] }); });
+  return out;
+}
+export const CORE = new Set(['R', '3', '♭3', '5', '♭5', '♯5', '7', '♭7', '𝄫7', '4']);
 export interface TensionMove { note: Note; label: string; /** signed semitones into the next chord; 0 = common tone */ semis: number; to: Note; toLabel: string; text: string }
 export interface ExtOption { chord: PChord; scale: ChordScale; why: string; moves: TensionMove[] }
 
-const ORD: Record<string, string> = { R: 'root', '3': '3rd', '♭3': '3rd', '5': '5th', '♭5': '♭5', '♯5': '♯5', '7': '7th', '♭7': '7th', '𝄫7': '7th', '4': '4th', '6': '6th', '9': '9th', '♭9': '♭9', '♯9': '♯9', '11': '11th', '♯11': '♯11', '13': '13th', '♭13': '♭13' };
+export const ORD: Record<string, string> = { R: 'root', '3': '3rd', '♭3': '3rd', '5': '5th', '♭5': '♭5', '♯5': '♯5', '7': '7th', '♭7': '7th', '𝄫7': '7th', '4': '4th', '6': '6th', '9': '9th', '♭9': '♭9', '♯9': '♯9', '11': '11th', '♯11': '♯11', '13': '13th', '♭13': '♭13' };
 /**
  * Where each tension of `c` goes in the next chord, by the usual voice-leading order: keep a common
  * tone (as a chord tone or an available tension of the next chord), else move a half step to a
@@ -138,9 +150,7 @@ export function tensionMoves(c: PChord, next: PChord, key: Key): TensionMove[] {
   const chordT = next.tones.map((n, i) => ({ n, label: next.labels[i], tension: false }));
   const tensT = tensionsOf(nextScale).filter(t => !next.tones.some(n => pcOf(n) === pcOf(t.note))).map(t => ({ n: t.note, label: t.label, tension: true }));
   const out: TensionMove[] = [];
-  c.tones.forEach((x, i) => {
-    const label = c.labels[i];
-    if (CORE.has(label) || (c.upper && i < 3)) return;
+  chordTensions(c).forEach(({ note: x, label }) => {
     const find = (list: typeof chordT, d: number) => list.find(t => mod(pcOf(t.n) - pcOf(x), 12) === mod(d, 12));
     const tries: [typeof chordT, number][] = [[chordT, 0], [tensT, 0], [chordT, -1], [chordT, 1], [chordT, -2], [chordT, 2], [tensT, -1], [tensT, 1]];
     for (const [list, d] of tries) {

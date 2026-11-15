@@ -431,3 +431,9 @@ main{flex:1;padding:22px 0 40px}
 .srcs li{margin:8px 0}
 .srcs a{color:var(--gold)}
 @media (max-width:640px){.tabbar button{font-size:.54rem}}
+
+/* extension pickers on Move */
+.extpick{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.extpick .seg button{font-family:var(--display);font-weight:700}
+.pick .extnote{grid-column:1/-1;margin:0}
+.ptag.fit{border-color:var(--c0);color:var(--c0)}

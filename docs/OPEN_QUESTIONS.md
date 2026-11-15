@@ -82,3 +82,16 @@ Numbers and labels (tunable data, not theory)
     resolutions (e.g. ♯9 → ♭9 → 5), tell me and I will make them rules with tests.
 32. **Extensions are for listening so far:** tapping an extended chord plays it into the next chord,
     but does not replace the chord in the Move path or in a progression. Want "use this one"?
+    **Update:** on Move you now pick the extension on the start and landing chord, and it is part of
+    the move (see below). Not yet on Progression tiles (typed chords like Dm9 do work there).
+
+## From putting extensions into the move
+33. **How much the extensions change the ranking:** score × (0.5 + fit), where fit is 1 for a held
+    note, 0.75 for a half step, 0.5 for a whole step. My numbers. Stronger or weaker?
+34. **Which passing chords get extended:** only plain 7th chords (7, m7, maj7). Chords a technique
+    already colors (V7♭9 of the dark 2-5, upper structures, slash and sus chords, triads) stay as
+    they are. OK?
+35. **Bright 2-5 into a minor chord with extensions** gives e.g. Bm11 → E7♭9♭13 → Am9. The Bm11
+    carries C♯ (its Dorian 9) while Am has C. Keep, or hold the ii at m7 / m7add11 there?
+36. **Plain chords stay plain:** with no extension picked, passing chords are not extended, even
+    though each genre lists favorite extensions. Should the genre add them by default?

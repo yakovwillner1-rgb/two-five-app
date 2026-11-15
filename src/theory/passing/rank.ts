@@ -2,9 +2,9 @@ import { FEEL_MATCH, FEEL_MISS, GENRES, type Style } from '../../data/styles';
 import type { Suggestion } from './types';
 
 export interface Ranked { suggestion: Suggestion; score: number }
-/** Score = how typical the technique is for the genre × whether its color matches the feel. */
+/** Score = how typical the technique is for the genre × whether its color matches the feel × how well it carries the picked extensions. */
 export function scoreOf(s: Suggestion, style: Style): number {
-  return GENRES[style.genre].weights[s.techniqueId] * (s.colorTags.includes(style.feel) ? FEEL_MATCH : FEEL_MISS);
+  return GENRES[style.genre].weights[s.techniqueId] * (s.colorTags.includes(style.feel) ? FEEL_MATCH : FEEL_MISS) * (s.ext?.factor ?? 1);
 }
 /**
  * Order suggestions for a style. `shown`: best first (ties: calmer first, then catalogue order).

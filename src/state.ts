@@ -3,6 +3,7 @@ import type { Feel } from './data/techniques';
 import { HOME, homeChords, homeKey, homeTitle } from './theory/home';
 import { bestMode, modeInfo, type ModeView } from './theory/modes';
 import type { Family, Flavor, HomeChord, HomeMode, Key, ModeDetail, Note, ScaleType } from './theory/types';
+import type { KindId } from './theory/symbols';
 
 export type Tab = 'move' | 'prog' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
 /**
@@ -22,7 +23,7 @@ export interface State {
   dmode: 'spell' | 'ear'; efam: Family; ear: { fam: Family; deg: number; pc: number; ans: number | null } | null; escore: { r: number; t: number };
   voiceHover: boolean;
   /* Move tab: style, typed FROM/TO symbols (override from/to), the chosen way ("techniqueId.variant") */
-  pgenre: Genre; pfeel: Feel; fromSym: string | null; toSym: string | null; way: string | null; pshowAll: boolean;
+  pgenre: Genre; pfeel: Feel; fromSym: string | null; toSym: string | null; fromExt: KindId | null; toExt: KindId | null; way: string | null; pshowAll: boolean;
   /** last typed progression chord that could not be read (not saved) */
   progBad: string | null;
 }
@@ -31,7 +32,7 @@ export const S: State = {
   prog: [{ d: 0, via: null }, { d: 3, via: 'secIIV' }], quiz: null, score: { r: 0, t: 0 }, tipDone: false, soundOut: null,
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
   mfam: 'major', mview: 'parallel', mdeg: 1, mroot: null, dmode: 'spell', efam: 'major', ear: null, escore: { r: 0, t: 0 }, voiceHover: true,
-  pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, way: null, pshowAll: false, progBad: null,
+  pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, fromExt: null, toExt: null, way: null, pshowAll: false, progBad: null,
 };
 
 /* Same storage key as the single-file app, so saved settings carry over. */
@@ -40,7 +41,7 @@ const snap = () => ({
   soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
-  pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, way: S.way,
+  pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way,
 });
 export function save(): void { try { localStorage.setItem(LSK, JSON.stringify(snap())); } catch (e) { /* storage full or blocked */ } }
 export function load(): Partial<State> { try { return JSON.parse(localStorage.getItem(LSK) || '{}') || {}; } catch (e) { return {}; } }
@@ -58,6 +59,6 @@ export function setMode(m: HomeMode): void {
   if (S.mode === m) return;
   S.mode = m; S.from = 0; S.to = 3;
   S.prog = HOME[m].presets[0][1].map((d, i) => ({ d, via: i > 0 ? 'secIIV' : null }));
-  S.fromSym = null; S.toSym = null;
+  S.fromSym = null; S.toSym = null; S.fromExt = null; S.toExt = null;
   S.quiz = null;
 }
