@@ -36,9 +36,13 @@ describe('parity with the original index.html', () => {
       const c = chordInfo(note(k), t, d), o = L.chordInfo(k, t, d);
       expect(flatChord(c)).toEqual(oldChord(o));
       expect(famOf(c)).toEqual(L.famOf(o));
-      expect(allVoicings(c).map(flatV)).toEqual(L.VDEF.map((def: unknown) => L.buildVoicing(o, def)));
+      /* Phase 2 changed one rule on purpose: rootless voicings of a dominant 7 take the 13 for the 5
+         (tested in tests/theory/voicings.test.ts), so those two voicings are not compared for dominants. */
+      const dom = c.quality === '7', same = (_x: unknown, i: number) => !dom || (i !== 6 && i !== 7);
+      expect(allVoicings(c).map(flatV).filter(same)).toEqual(L.VDEF.map((def: unknown) => L.buildVoicing(o, def)).filter(same));
       const st = mkStep(c, 'x'), os = L.mkStep(o, 'x');
-      expect({ vp: st.voicingPcs, p3: st.third, p7: st.seventh, scale: [...st.scale], v: flatV(st.voicing) }).toEqual({ vp: os.vp, p3: os.p3, p7: os.p7, scale: [...os.scale], v: os.v });
+      expect({ p3: st.third, p7: st.seventh, scale: [...st.scale] }).toEqual({ p3: os.p3, p7: os.p7, scale: [...os.scale] });
+      if (!dom) expect({ vp: st.voicingPcs, v: flatV(st.voicing) }).toEqual({ vp: os.vp, v: os.v });
       expect(playbackVoicing(c.tones, 64)).toEqual(L.voicing(o.tones, 64));
       count++;
     }
@@ -72,7 +76,9 @@ describe('parity with the original index.html', () => {
             const m = modeInfo(pc, fam, deg, view), o = L.modeInfo(fam, deg);
             expect({ notes: ns(m.notes), tones: ns(m.chord.tones), q: m.chord.quality, sym: m.chord.symbol, name: m.name, formula: m.formula, parent: m.parent, char: m.char, sound: m.sound, use: m.use })
               .toEqual({ notes: o.notes, tones: o.tones, q: o.q, sym: o.sym, name: o.name, formula: o.formula, parent: o.parent, char: o.char, sound: o.sound, use: o.use });
-            expect(allVoicings(m.chord).map(flatV)).toEqual(L.VDEF.map((def: unknown) => L.buildVoicing(o, def)));
+            /* dominants: rootless voicings take the 13 since Phase 2 (see above) */
+            const keep = (_x: unknown, i: number) => m.chord.quality !== '7' || (i !== 6 && i !== 7);
+            expect(allVoicings(m.chord).map(flatV).filter(keep)).toEqual(L.VDEF.map((def: unknown) => L.buildVoicing(o, def)).filter(keep));
           }
         }
       }

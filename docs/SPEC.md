@@ -54,6 +54,13 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   time the chord is named (inversions, missing 5th, rootless voicings; other readings one tap away),
   logged, and the app lists where it usually goes and the ranked ways to get there. Any of it can be
   added to Progression or opened in Move. No microphone.
+- **Melody on top** (Phase 2): pick a chord and a melody note (tap a key, type it, or play it on a
+  MIDI keyboard). The note is checked (chord tone / available tension / avoid note / outside the
+  scale, with fixes) and every voicing with that note on top is listed: close, drop 2, drop 3,
+  drop 2&4, block chords, rootless A/B, Barry Harris 6th-diminished, So What / quartal, upper
+  structures, spread, cluster. "Keep" builds a voice-leading line; the next chord's voicings are then
+  ordered smoothest first, with each voice's motion. Kept voicings can be practised in Play it.
+  Optional "Goes to" chord (decides the scale) and genre (its favorite voicing types come first).
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.
@@ -61,10 +68,11 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   Chart You'll Ever Need").
 - **Drill**: 2-5 spelling flashcards + modes by ear.
 - **Play it**: Web MIDI input + on-screen multitouch piano; checks the move / progression /
-  random 2-5s / mode scale; "Any voicing" (3rd+7th required, rest must fit the scale) vs
+  random 2-5s / mode scale / the voicings kept on the Melody tab (always exact); "Any voicing" (3rd+7th required, rest must fit the scale) vs
   "Exact voicing"; green/red keys, gold hint dots, time + wrong-note stats.
 - **Voicings**: hover (Mac) / long-press (iPad) shows one fitting voicing (Rootless A for non-dominant,
-  Rootless B for dominant) + "All voicings" sheet with 10 voicings.
+  Rootless B for dominant) + "All voicings" sheet with 10 voicings. Dominant rootless voicings use the
+  13 instead of the 5 (A = 3-13-7-9, B = 7-9-3-13).
 - **Sound**: built-in synth, or MIDI out to any port (IAC Driver Bus 1 → Logic + Kontakt). The app
   never listens to the port it sends to (feedback guard). Stop sends note-offs (no stuck notes).
 - Keyboard shortcuts: Space play/stop, ←/→ key, 1–7 land on chord, Esc close popup.
@@ -226,6 +234,7 @@ play/export → drag into Logic → lines up with the original region.
       pending: merge to `main` and set Pages source to "GitHub Actions")
 - [x] Phase 1 Passing engine, styles, explanations (see `docs/OPEN_QUESTIONS.md` 6–24 for defaults
       waiting on Ralph; IAC/Logic playback not checked with real devices)
-- [ ] Phase 2 Lead voicing
+- [x] Phase 2 Lead voicing (Melody tab; Claude's picks for 44–56 and open points 57–58 in `docs/OPEN_QUESTIONS.md`;
+      not checked with a real MIDI keyboard or on iPad)
 - [ ] Phase 3 MIDI reharm
 - [ ] Phase 4 Practice + polish

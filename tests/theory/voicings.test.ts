@@ -27,14 +27,25 @@ describe('voicing builders', () => {
     expect(v(Dm7, 'Rootless A')).toBe('F53 A57 C60 E64');
     expect(labels(Dm7, 'Rootless A')).toBe('♭3 5 ♭7 9');
   });
-  it('Rootless B G7 = F A B D (current 7-9-3-5 rule; the 13 comes in Phase 2)', () => {
-    expect(v(G7, 'Rootless B')).toBe('F53 A57 B59 D62');
-    expect(labels(G7, 'Rootless B')).toBe('♭7 9 3 5');
+  it('Rootless B G7 = F A B E (SPEC; Levine: dominant B = 7-9-3-13)', () => {
+    expect(v(G7, 'Rootless B')).toBe('F53 A57 B59 E64');
+    expect(labels(G7, 'Rootless B')).toBe('♭7 9 3 13');
+    expect(buildVoicing(G7, VDEF.find(d => d.name === 'Rootless B')!).sub).toBe('7 9 3 13');
+  });
+  it('Rootless A G7 = B E F A (Levine: dominant A = 3-13-7-9)', () => {
+    expect(v(G7, 'Rootless A')).toBe('B59 E64 F65 A69');
+    expect(labels(G7, 'Rootless A')).toBe('3 13 ♭7 9');
+  });
+  it('only dominants take the 13: other chords keep the 5', () => {
+    expect(labels(Cmaj7, 'Rootless B')).toBe('7 9 3 5');
+    expect(labels(Dm7, 'Rootless B')).toBe('♭7 9 ♭3 5');
+    expect(labels(G7, 'Drop 2')).toBe('5 R 3 ♭7');
   });
   it('keeps the ♭9 on a dominant from harmonic minor', () => {
     const E7 = chordInfo(note('A'), 'harmonic', 4);
-    expect(v(E7, 'Rootless B')).toBe('D50 F53 G#56 B59');
-    expect(labels(E7, 'Rootless B')).toBe('♭7 ♭9 3 5');
+    /* the 13 is the 6th note of the chord's mode: ♭13 on the V of a minor key */
+    expect(v(E7, 'Rootless B')).toBe('D50 F53 G#56 C60');
+    expect(labels(E7, 'Rootless B')).toBe('♭7 ♭9 3 ♭13');
   });
   it('swaps a ♭9 for a natural 9 on non-dominant chords', () => {
     const Bh = chordInfo(note('C'), 'major', 6), Em7 = chordInfo(note('C'), 'major', 2);
@@ -71,7 +82,7 @@ describe('voicing builders', () => {
         // each step up is less than an octave (closest note above)
         for (let i = 1; i < ms.length; i++) expect(ms[i] - ms[i - 1]).toBeLessThanOrEqual(12);
         const D = degNotes(c);
-        x.notes.forEach((n, i) => { expect(n.note).toEqual(D[def.slots[i]]); expect(n.midi % 12).toBe(pcOf(n.note)); });
+        x.notes.forEach((n, i) => { const k = def.slots[i]; expect(n.note).toEqual(D[c.quality === '7' && def.name.startsWith('Rootless') && k === '5' ? '13' : k]); expect(n.midi % 12).toBe(pcOf(n.note)); });
       });
     }
   });

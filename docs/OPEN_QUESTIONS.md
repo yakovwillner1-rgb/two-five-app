@@ -113,3 +113,33 @@ Numbers and labels (tunable data, not theory)
 43. **Key detection** only suggests another key of the same mode when at least two more of the
     heard chords fit it. It never switches by itself.
 
+
+## From Phase 2 (Melody on top): answered
+Ralph asked Claude to pick what is best (15 Nov 2026). These are Claude's picks; say so if any is wrong.
+44. **Dominant with no next chord:** added a "Goes to" picker on the Melody tab. With none picked, a
+    dominant is still read as the V of the key chord a fifth below.
+45. **Tension substitution:** kept. 9 replaces the root; 11, ♯11, 13, ♭13 replace the 5th; the 3rd
+    and 7th always stay (they define the chord).
+46. **Barry Harris:** kept as built (plain 7, 9, 13 dominants only; the maj7's 7th is a passing note).
+47. **Cluster:** kept as built (3rd, 7th, 9th under the melody, only when a 2nd ends up inside).
+48. **Half step right under the melody:** fixed. With the root on top of a major 7 chord the 6th
+    takes the place of the 7th (close, drop, block, spread). THEORY_SOURCES rule 30.
+49. **Avoid notes still get voicings:** kept, with the warning and fixes on top. Hearing the clash
+    teaches more than an empty list.
+50. **Registers:** kept (rootless from D3; spread root in C2–B2).
+51. **Low-interval limit:** kept at 3rds only (E2), as the spec says. No sourced numbers for the rest.
+52. **Order with no previous voicing:** now the genre's favorite voicing types first (the lists
+    already in `src/data/styles.ts`), then by type. With a previous voicing, smoothness still wins
+    and the genre only breaks ties. Genre picker added to the Melody tab.
+53. **Play it → Voicings:** kept exact (bottom to top, any octave).
+54. **♭13 on the V of a minor key** in the voicing sheet: kept. It is the note of the key.
+55. **Minor upper structures:** added i (7♯9) and ♭ii (7♭9♭13). ♭iii (7♯9♯11) and ♯iv (13♭9♯11)
+    are left out: the app has no chord type for those two symbols yet.
+56. **Tab bar:** kept 11 tabs; the phone label is "Prog".
+
+Still open from Phase 2:
+57. **Genre voicing lists** in `src/data/styles.ts` are first guesses (e.g. Jazz: rootless, drop 2;
+    Neo-soul: cluster, rootless, spread). "shell" is listed for some genres but there is no shell
+    voicing under a melody yet. Tune the lists?
+58. **13♯11 in four notes:** a close voicing has room for one note in the 5th's place, so C13♯11
+    keeps the ♯11 and drops the 13 unless the 13 is the melody. Use five notes there instead?
