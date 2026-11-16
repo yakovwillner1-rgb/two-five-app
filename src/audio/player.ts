@@ -49,7 +49,7 @@ export function playSeq(events: PlayEvent[], tag: string, done?: () => void): vo
     timers.push(setTimeout(() => {
       if (tok !== token) return;
       clearLive();
-      if (ev.id) document.querySelectorAll('[data-ev="' + ev.id + '"]').forEach(e => e.classList.add('live'));
+      if (ev.id) { document.querySelectorAll('[data-ev="' + ev.id + '"]').forEach(e => e.classList.add('live')); document.dispatchEvent(new CustomEvent('twofive:ev', { detail: { id: ev.id, dur: ev.dur } })); }
     }, ev.t * 1000 + 60));
     end = Math.max(end, ev.t + ev.dur);
   });

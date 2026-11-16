@@ -8,6 +8,7 @@ import { initActions } from './ui/actions';
 import { applyTheme, getTheme } from './ui/theme';
 import { refreshSound } from './ui/pieces';
 import { drawMidi, noteOff, noteOn, resetPL } from './ui/play';
+import { initMotion } from './ui/motion';
 import { initPopover, showPicker, showPop } from './ui/popover';
 import { TITLES, render } from './ui/render';
 
@@ -16,6 +17,7 @@ midiHooks.noteOff = noteOff;
 midiHooks.changed = () => { drawMidi(); refreshSound(); };
 
 applyTheme(getTheme(), false);
+initMotion();
 initPopover();
 initActions();
 

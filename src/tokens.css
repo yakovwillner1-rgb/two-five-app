@@ -23,6 +23,12 @@
   /* keyboard */
   --key-white:#FFFFFF; --key-stroke:#9CC7C6; --key-black:#10282E; --key-label:#10282E;
 
+  /* v2: glass panels, gradients, ambient blobs */
+  --glass:rgba(255,255,255,.66); --glass-2:rgba(255,255,255,.9); --tint:rgba(16,40,46,.05);
+  --grad-accent:linear-gradient(135deg,#9253FF 0%,#6A25E8 100%);
+  --blob-1:#7FE3D4; --blob-2:#A9B8FF; --blob-3:#D9B8FF; --blob-4:#FFE08A; --blob-op:.55;
+  --lift:#FFFFFF;   /* what role fills lighten toward in their gradient */
+
   /* type */
   --display:'Outfit','Noto Music',system-ui,-apple-system,'Segoe UI',sans-serif;
   --body:'Outfit','Noto Music',system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -40,7 +46,7 @@
   --shadow-pop:0 24px 60px -12px rgba(16,40,46,.35);
   --glow:0 0 0 3px var(--rc),0 10px 26px -6px var(--rc);
 
-  /* motion (reduced-motion zeroes these) */
+  /* motion (reduced-motion zeroes these). Rules: docs/DESIGN.md */
   --t-fast:120ms; --t-med:220ms; --t-slow:420ms;
   --ease-spring:cubic-bezier(.34,1.56,.64,1);   /* overshoots: pops */
   --ease-out:cubic-bezier(.22,1,.36,1);
@@ -61,6 +67,10 @@ html[data-theme="dark"]{
   --shadow-edge:0 var(--edge) 0 rgba(0,0,0,.45);
   --shadow-block:0 6px 0 rgba(0,0,0,.4);
   --shadow-pop:0 24px 60px -12px rgba(0,0,0,.75);
+  --glass:rgba(33,52,69,.62); --glass-2:rgba(33,52,69,.92); --tint:rgba(255,255,255,.06);
+  --grad-accent:linear-gradient(135deg,#B48BFF 0%,#8A55F5 100%);
+  --blob-1:#13806F; --blob-2:#34459E; --blob-3:#6A2FB5; --blob-4:#8A6A12; --blob-op:.5;
+  --lift:#FFFFFF;
 }
 
 @media (prefers-reduced-motion:reduce){
