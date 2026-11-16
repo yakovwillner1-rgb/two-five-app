@@ -1,7 +1,7 @@
 import { GENRES, type Style } from '../data/styles';
 import type { Bar } from '../midi/smf';
 import { feltBeat, melodyAt, type ANote } from './analyze';
-import { leadVoicings, melodyCheck, rankLead, type LeadVoicing } from './lead';
+import { leadVoicings, melodyCheck, rankLead, voiceMotion, type LeadVoicing, type Motion } from './lead';
 import { fmt, mod, pcOf } from './notes';
 import { passingChords } from './passing/engine';
 import { scoreOf } from './passing/rank';
@@ -113,39 +113,70 @@ export function summaryOf(level: Level, changes: Change[]): string {
 /* ---------- voicing the chart under the melody ---------- */
 export interface VNote { midi: number; note: Note; label: string }
 export interface VoicedChord extends RChord {
-  /** the notes to play under the melody, low to high (the melody note itself is left to the melody track) */
+  /** the notes of the chord part, low to high. Under a melody the melody note is left to the melody track; with no melody the top note is part of it */
   notes: VNote[];
   /** the melody note the voicing was built under, when there is one */
   top: number | null;
+  /** with no melody over the chord: the top note that was chosen for it (it is in `notes`) */
+  lead: number | null;
   /** name of the voicing type, e.g. "Rootless A + melody", or "Root position" for the fallback */
   voicing: string;
+  /** how the notes got here from the chord before (null for the first chord) */
+  motion: Motion | null;
+}
+/** Where the top voice starts when there is no melody: the chord tone nearest to C5. */
+export const TOP_START = 72;
+/**
+ * With no melody over a chord, the top note is chosen: the chord tone (not the root of a 7th chord)
+ * nearest to the top note of the chord before, so the top voice moves as little as possible.
+ */
+export function chooseTop(c: PChord, prevTop: number | null): number {
+  const pcs = c.tones.filter((_t, i) => c.tones.length <= 3 || i > 0).map(pcOf), aim = prevTop ?? TOP_START;
+  let best = aim, dist = 99;
+  pcs.forEach(pc => {
+    for (let m = pc + 48; m <= 88; m += 12) {
+      if (m < 62) continue;
+      const d = Math.abs(m - aim);
+      if (d < dist || (d === dist && m < best)) { dist = d; best = m; }
+    }
+  });
+  return best;
 }
 /**
- * Voice every chord under the melody note that sounds when it starts (Phase 2), choosing the
- * smoothest voicing from the one before. A chord with no melody over it, or whose melody note
- * clashes with it, gets a plain root-position voicing. The root is added in the bass (C2–B2) when
- * the voicing has none, so the reharm sounds complete on its own.
+ * Voice every chord (Phase 2). Under a melody: the voicing sits under the melody note that sounds
+ * when the chord starts. With no melody: the top note is chosen by `chooseTop`. Either way the
+ * smoothest voicing from the chord before wins. A chord whose melody note clashes with it gets a
+ * plain root-position voicing. The root is added in the bass (C2–B2) when the voicing has none,
+ * so the chord part sounds complete on its own.
  */
 export function voiceChart(chords: RChord[], melody: ANote[], key: Key, style: Style, level: Level): VoicedChord[] {
-  let prev: number[] | null = null;
+  let prev: number[] | null = null, prevTop: number | null = null, prevAll: number[] | null = null;
   return chords.map((c, i) => {
     const next = chords[i + 1]?.chord ?? null, m = melodyAt(melody, c.start, c.end);
+    const lead = m ? null : chooseTop(c.chord, prevTop), top = m ? m.midi : lead!;
     const usable = (v: LeadVoicing): boolean => v.type !== 'block' && !(v.type === 'sixthDim' && v.sounds !== undefined && /°7$/.test(v.sounds)) && (v.type !== 'upper' || level === 'wild');
-    const list = m ? leadVoicings(c.chord, m.midi, next, key).filter(usable) : [];
+    const list = leadVoicings(c.chord, top, next, key).filter(usable);
     const pick = list.length ? rankLead(list, prev, GENRES[style.genre].voicings)[0].voicing : null;
     let notes: VNote[], voicing: string;
     if (pick) {
-      notes = pick.notes.slice(0, -1).map(n => ({ midi: n.midi, note: n.note, label: n.label }));
-      voicing = pick.name;
+      notes = (m ? pick.notes.slice(0, -1) : pick.notes).map(n => ({ midi: n.midi, note: n.note, label: n.label }));
+      voicing = m ? pick.name : pick.name.replace(' + melody', '');
       prev = pick.notes.map(n => n.midi);
+      prevTop = top;
     } else {
       notes = passVoicing(c.chord).map(n => ({ midi: n.midi, note: n.note, label: n.label }));
       voicing = 'Root position';
       prev = notes.map(n => n.midi);
+      prevTop = Math.max(...prev);
     }
+    /* voice leading is measured on the voicing itself (with the melody note over it). The bass root
+       added below is left out: a bass line follows the roots and leaps by 4ths and 5ths */
+    const all = [...notes.map(n => n.midi), ...(m && pick ? [m.midi] : [])];
+    const motion = prevAll ? voiceMotion(prevAll, all) : null;
+    prevAll = all;
     const bass = c.chord.bass ?? c.chord.root;
     if (!notes.some(n => mod(n.midi, 12) === pcOf(bass))) notes = [{ midi: 36 + pcOf(bass), note: bass, label: c.chord.bass ? fmt(bass) : 'R' }, ...notes];
     notes.sort((a, b) => a.midi - b.midi);
-    return { ...c, notes, top: m && pick ? m.midi : null, voicing };
+    return { ...c, notes, top: m && pick ? m.midi : null, lead: pick ? lead : null, voicing, motion };
   });
 }

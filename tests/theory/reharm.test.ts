@@ -4,7 +4,7 @@ import type { ANote } from '../../src/theory/analyze';
 import { homeKey } from '../../src/theory/home';
 import { melodyCheck } from '../../src/theory/lead';
 import { pcOf } from '../../src/theory/notes';
-import { LEVELS, melodyFits, reharmonize, slotLength, voiceChart, type ChartChord, type Level } from '../../src/theory/reharm';
+import { LEVELS, chooseTop, melodyFits, reharmonize, slotLength, voiceChart, type ChartChord, type Level } from '../../src/theory/reharm';
 import { parseChord } from '../../src/theory/symbols';
 
 /* Reharm of | Cmaj7 | Am7 | Dm7 | G7 | Cmaj7 | in C, 4/4, PPQ 480. */
@@ -124,9 +124,36 @@ describe('voicing the chart under the melody', () => {
   });
   it('the first chord is voiced under E5 (bar 1 melody), a chord with no melody gets root position', () => {
     expect(v[0].top).toBe(76);
-    const none = voiceChart([{ ...chart[0], added: false }], [], C, jazz, 'light')[0];
-    expect(none.voicing).toBe('Root position');
-    expect(none.top).toBeNull();
-    expect(none.notes.map(x => x.midi)).toEqual([48, 52, 55, 59]);
+  });
+  it('voice leading is reported for every chord after the first', () => {
+    expect(v[0].motion).toBeNull();
+    v.slice(1).forEach(c => { expect(c.motion).not.toBeNull(); expect(c.motion!.total).toBeGreaterThanOrEqual(0); });
+  });
+});
+
+describe('a chart with no melody (a typed lead sheet)', () => {
+  const plain = chart.map(c => ({ ...c, added: false })), v = voiceChart(plain, [], C, jazz, 'light');
+  it('the top note is a chord tone near C5, never the root of a 7th chord', () => {
+    expect(chooseTop(ch('Cmaj7'), null)).toBe(71);  // B4 (a half step) beats E5 and G4
+    expect(chooseTop(ch('Dm7'), 71)).toBe(72);      // C5, the 7th
+    expect(chooseTop(ch('G7'), 72)).toBe(71);       // B4, the 3rd
+    expect(chooseTop(ch('C'), 71)).toBe(72);        // a triad may have its root on top
+  });
+  it('every chord gets a full voicing with its top note in it, and the top voice moves by step', () => {
+    v.forEach(c => {
+      expect(c.top).toBeNull();
+      expect(c.lead).not.toBeNull();
+      expect(Math.max(...c.notes.map(x => x.midi))).toBe(c.lead);
+      expect(c.voicing).not.toMatch(/melody/);
+    });
+    for (let i = 1; i < v.length; i++) expect(Math.abs(v[i].lead! - v[i - 1].lead!)).toBeLessThanOrEqual(2);
+  });
+  it('the whole ii–V–I moves little: under 3 semitones a voice on average', () => {
+    v.slice(1).forEach(c => expect(c.motion!.mean, c.chord.symbol).toBeLessThan(3));
+  });
+  it('reharm works with no melody too: nothing blocks the passing chords', () => {
+    const r = reharmonize(chart, [], bars, C, jazz, 'medium');
+    expect(r.changes).toHaveLength(4);
+    r.changes.forEach(c => expect(c.lines.some(l => l.startsWith('Melody: '))).toBe(false));
   });
 });
