@@ -11,7 +11,8 @@ import type { Chord, HomeChord } from '../../theory/types';
 import { extensionOptions, scaleChoices } from '../../theory/tensions';
 import { optionChip, scaleChips, tensionLine } from '../extensions';
 import { chordKeys, esc, extChoices, findWay, pickChord, playTones, rankedWays, wayButton, wayKey, withExt } from '../passing';
-import { vlStage } from '../keyboards';
+import { listeningCue, pitchName, resolveStudy, studyEvents, studyLength, type Study } from '../../study/model';
+import { playedStage } from '../keyboards';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
 /* Move: get from one chord to another. Every passing technique is a "way"; the 2-5 is one of them. */
@@ -29,15 +30,23 @@ export function moveModel(): MoveModel {
   const sel = findWay(f.chord, t.chord, S.way) ?? list[0] ?? null;
   return { H, from: f.chord, to: t.chord, fromChoices, toChoices, badFrom: f.bad, badTo: t.bad, shown, hidden, list, sel };
 }
-/** Play button: FROM (4 beats) → each passing chord (2 beats) → TO (4 beats). */
+/** The chords of the path, in order, with their data-ev ids and beats: [FROM (4)] → passing (2 each) → TO (4). */
+export function moveSeq(m: MoveModel): { chords: PChord[]; ids: string[]; beats: number[] } {
+  const pass = m.sel?.chords ?? [], showFrom = !m.sel?.replacesFrom;
+  return {
+    chords: [...(showFrom ? [m.from] : []), ...pass, m.to],
+    ids: [...(showFrom ? ['mf'] : []), ...pass.map((_c, j) => 'm' + j), 'mt'],
+    beats: [...(showFrom ? [4] : []), ...pass.map(() => 2), 4],
+  };
+}
+/** The current route as resolved musical material: what is shown, played, compared and practised. */
+export function moveStudy(m: MoveModel = moveModel()): Study {
+  const q = moveSeq(m);
+  return resolveStudy(q.chords, m.sel?.name ?? 'Route', curTitle(), q.beats);
+}
 playSources.move = (): PlayEvent[] => {
-  const m = moveModel(), b = beat(), ev: PlayEvent[] = [];
-  let t = 0;
-  const add = (c: PChord, beats: number, id: string) => { ev.push({ t, dur: beats * b, tones: playTones(c), id }); t += beats * b; };
-  if (!m.sel?.replacesFrom) add(m.from, 4, 'mf');
-  (m.sel?.chords ?? []).forEach((c, j) => add(c, 2, 'm' + j));
-  add(m.to, 4, 'mt');
-  return ev;
+  const m = moveModel(), q = moveSeq(m);
+  return studyEvents(moveStudy(m), beat(), q.ids).map(e => ({ ...e, tones: [] }));
 };
 
 /** The chart chord behind a 2-5 chord, so its card can show the scale to play and the voicings. */
@@ -73,20 +82,27 @@ export function viewMove(): string {
   /* the chart chord (for the voicing popover and the scale card) only while the chord is not extended */
   const chartFrom = (!S.fromSym || m.badFrom) && fromChart(m.H[S.from]).symbol === m.from.symbol ? m.H[S.from] : null;
   const chartTo = (!S.toSym || m.badTo) && fromChart(m.H[S.to]).symbol === m.to.symbol ? m.H[S.to] : null;
-  const tip = S.tipDone ? '' : `<div class="tip"><p><b>How it works:</b> pick the chord you start on and the chord you want to land on. Every way to get there is listed below; the 2‑5 is one of them. Add an extension (9, 11, 13 …) to either chord and the ways adapt. Pick a way, then press play or the space bar. Hover a chord on a Mac, or press and hold it on iPad, for a voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
+  const tip = S.tipDone ? '' : `<div class="tip"><p><b>Pick a start and a landing chord, then press ▶.</b> Tap a chord card to change it. Hover (Mac) or press and hold (iPad) a chord for its voicing.</p><button class="pill sm" data-a="tipx">Got it</button></div>`;
   const ways = m.list.map((x, i) => wayButton(x, `data-a="way" data-k="${wayKey(x)}"`, !!s && wayKey(x) === wayKey(s), i >= m.shown.length)).join('');
   const hiddenNote = m.hidden.length ? `<p class="hint">${S.pshowAll ? 'Showing' : 'Hiding'} ${m.hidden.length} way${m.hidden.length === 1 ? '' : 's'} that ${g.label} rarely uses or that ${m.hidden.length === 1 ? 'is' : 'are'} above its tension limit. <button class="linkbtn" data-a="pshow">${S.pshowAll ? 'Hide them' : 'Show them'}</button></p>` : '';
   const chords = s ? s.chords : [], showFrom = !s?.replacesFrom;
   const seq = [...(showFrom ? [m.from] : []), ...chords, m.to];
   const cls = [...(showFrom ? ['r0'] : []), ...chords.map((_c, j) => (j === chords.length - 1 ? 'r5' : 'r2')), 'r1'];
-  const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string) => `<div class="blk ${cl}" data-ev="${id}" data-flip="h:${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bt">${top}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div></div>`;
+  const study = moveStudy(m), q = moveSeq(m), cue = listeningCue(study);
+  const pitches = (ei: number) => study.events[ei].midis.map((_x, i) => {
+    const hot = !!cue && ((ei === cue.fromIndex && study.events[ei].midis[i] === cue.fromMidi) || (ei === cue.toIndex && study.events[ei].midis[i] === cue.toMidi));
+    return `<span class="pt${hot ? ' focus' : ''}">${pitchName(study.events[ei], i)}</span>`;
+  }).join('');
+  const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string, side?: 'from' | 'to') => {
+    const ei = q.ids.indexOf(id);
+    return `<div class="blk ${cl}" data-ev="${id}" data-flip="h:${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bth"><div class="bt">${top}</div>${side ? `<button class="blkchg" data-a="pickside" data-v="${side}" aria-expanded="${S.pickSide === side}" aria-label="Change the ${side === 'from' ? 'start' : 'landing'} chord">${S.pickSide === side ? 'done' : 'change'} ▾</button>` : ''}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div><div class="bp" aria-label="Notes played">${pitches(ei)}</div></div>`;
+  };
   const fromRef = chartFrom ? cref(chartFrom) : undefined, toRef = chartTo ? cref(chartTo) : undefined;
   const path = [
-    ...(showFrom ? [blk(m.from, 'r0', 'mf', romanNumeral(m.from, key) + ' · start', 'start chord', fromRef)] : []),
+    ...(showFrom ? [blk(m.from, 'r0', 'mf', romanNumeral(m.from, key) + ' · start', 'start chord', fromRef, 'from')] : []),
     ...chords.map((c, j) => { const ch = chartOf(m, j); return blk(c, cls[(showFrom ? 1 : 0) + j], 'm' + j, s!.romanNumerals[j], s!.name.toLowerCase(), ch ? cref(ch) : undefined); }),
-    blk(m.to, 'r1', 'mt', romanNumeral(m.to, key) + ' · land', 'target', toRef),
+    blk(m.to, 'r1', 'mt', romanNumeral(m.to, key) + ' · land', 'target', toRef, 'to'),
   ].join('<div class="ar" aria-hidden="true"><i></i></div>');
-  const ids = [...(showFrom ? ['mf'] : []), ...chords.map((_c, j) => 'm' + j), 'mt'];
   const cards = [
     ...chords.map((c, j) => detail(c, cls[(showFrom ? 1 : 0) + j], s!.romanNumerals[j], 'm' + j, chartOf(m, j))),
     detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', chartTo),
@@ -106,24 +122,41 @@ export function viewMove(): string {
   const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('')
     + (s.ext?.lines.length ? `<p><span class="whyl">Extensions</span>${s.ext.lines.join('<br>')}</p>` : '') : '';
   const extOn = !!s?.ext;
-  return `<div class="stack">${tip}
+  /* choose: a tray under the path with the chords of the key as big tiles; typing and extensions are one step further */
+  const side = S.pickSide, tray = side ? `<div class="tray" data-flip="tray"><div class="trayh"><span class="lbl">${side === 'from' ? 'Start on' : 'Land on'}</span><button class="vx" data-a="pickside" data-v="${side}" aria-label="Close">×</button></div>
+    ${side === 'from' ? tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true) : tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1', true)}
+    <details class="more"${(side === 'from' ? S.fromSym || S.fromExt : S.toSym || S.toExt) ? ' open' : ''}><summary>Type a chord or add an extension</summary>${side === 'from' ? input('from', S.fromSym, m.badFrom) + extRow('from', m.fromChoices, m.from) : input('to', S.toSym, m.badTo) + extRow('to', m.toChoices, m.to)}${extOn ? '<p class="small">The passing chords took extensions that connect to yours; routes are re-ranked by how smoothly your added notes carry through (the “connection” tag).</p>' : ''}</details></div>` : '';
+  const startPill = !showFrom ? `<button class="pill sm startpill" data-a="pickside" data-v="from">Start: ${m.from.symbol} · change ▾</button>` : '';
+  /* understand: one cue from the notes actually played */
+  const cueHTML = cue ? `<div class="cue" data-flip="cue"><span class="lbl">Listen for this</span><p>${cue.text}</p><button class="pill sm" data-a="study-focus">▶ Hear just this line</button></div>` : '';
+  /* explore: a few contrasting routes (different techniques); everything else is one tap away */
+  const seen = new Set<string>(), top: Suggestion[] = [];
+  m.shown.forEach(r => { if (top.length < 3 && !seen.has(r.suggestion.techniqueId)) { seen.add(r.suggestion.techniqueId); top.push(r.suggestion); } });
+  if (s && !top.some(x => wayKey(x) === wayKey(s))) top[top.length - 1] = s;
+  const topHTML = top.map(x => wayButton(x, `data-a="way" data-k="${wayKey(x)}"`, !!s && wayKey(x) === wayKey(s))).join('');
+  /* apply: save as A, compare, practise */
+  const nowB = moveStudy(m), beatsOf = (st: Study) => studyLength(st);
+  const chain = (st: Study) => st.events.map(e => e.symbol).join(' → ');
+  const A = S.studyA;
+  const compare = A ? `<div class="compare" data-flip="compare"><div class="cmp" data-ev="study-a-mark"><span class="ab">A · saved</span><b>${chain(A)}</b><small>${A.title} · ${A.key} · ${beatsOf(A)} beats</small><button class="pill sm" data-a="study-a">▶ Hear A</button></div>
+    <div class="cmp now" data-ev="study-b-mark"><span class="ab">B · current</span><b>${chain(nowB)}</b><small>${nowB.title} · ${nowB.key} · ${beatsOf(nowB)} beats</small><button class="pill sm" data-a="play">▶ Hear B</button></div>
+    <div class="cmpact"><button class="pill go" data-a="study-ab">▶ A, then B</button><button class="pill sm" data-a="study-clear">Clear A</button></div>
+    <p class="hint">B is whatever is selected above. Both play at ${S.tempo} bpm with the notes shown.</p></div>` : '';
+  const fold = (title: string, body: string, open = false) => `<details class="panel fold"${open ? ' open' : ''}><summary>${title}</summary><div class="foldbody">${body}</div></details>`;
+  return `<div class="stack connect">${tip}
    <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2 class="sr">Get from ${m.from.symbol} to ${m.to.symbol}</h2></div>
-   <div class="stage"><div class="pathx">${path}</div>${vlStage(seq, ids)}</div>
-   <div class="panel pick">
-     <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}${extRow('from', m.fromChoices, m.from)}</div>
-     <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}${extRow('to', m.toChoices, m.to)}</div>
-     <p class="small extnote">${extOn ? 'The passing chords below took extensions that connect to yours, and the ways are re-ranked by how smoothly your added notes carry through (the “ext” mark).' : 'Pick an extension on either chord: the passing chords pick up matching extensions and the ways re-rank.'}</p>
-   </div>
-   <div class="panel wayspanel">
-     <div class="waysh"><h3 style="margin:0">Ways to get there</h3><span class="small">${m.shown.length} for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()} first. Tap one to use it.</span></div>
-     <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
-     <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
-     <div class="ways">${ways || '<div class="empty">No passing chords for this pair in this style. Try another genre or target.</div>'}</div>${hiddenNote}
-   </div>
-   ${s ? `<div class="duo"><div class="panel why"><h3>What's happening · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}</h3>${why}</div>
-   <div class="panel"><h3>Voice‑leading lines</h3><p class="small" style="margin:0">The 3rds and 7ths move by small steps. Hum these and you hear the whole move.</p>
-     <div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div></div></div>` : ''}
-   ${ext}
-   <div class="cards">${cards}</div>
-   </div>`;
+   <section class="stage">${startPill}<div class="pathx">${path}</div>${tray}${cueHTML}${playedStage(study, q.ids, cls, cue)}</section>
+   <section class="panel routes"><div class="waysh"><h3>Other routes</h3><span class="small">Best for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()}. Tap one to try it.</span></div>
+     <div class="ways" data-flip-list>${topHTML || '<div class="empty">No routes for this pair in this style. Try another style or target.</div>'}</div>
+     <details class="more"><summary>All ${m.shown.length} routes, style and feel</summary>
+       <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
+       <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
+       <div class="ways">${ways}</div>${hiddenNote}</details></section>
+   <section class="applybar"><button class="pill" data-a="study-save">${A ? 'Replace A with this' : 'Save as A to compare'}</button><button class="pill go" data-a="study-practice">Practice this →</button></section>
+   ${compare}
+   ${s ? fold(`Why it works · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}`, `<div class="why"><p class="small">What the technique does in general. The notes actually played are in the keyboard above.</p>${why}</div>`) : ''}
+   ${s ? fold('Guide tones by name (reference)', `<p class="small" style="margin:0">The 3rds and 7ths of each chord as note names, nearest-note view. Hum these and you hear the whole move. They are not octave-exact; the keyboard above shows what is played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
+   ${fold('Scales and extensions', ext)}
+   ${fold('Chord details and example voicings (reference)', `<div class="cards">${cards}</div>`)}
+  </div>`;
 }

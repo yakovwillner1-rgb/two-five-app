@@ -1,3 +1,4 @@
+import { toTop } from './scroll';
 import { rotateCircle } from './motion';
 import { toggleTheme } from './theme';
 import { playChords, playNotes, playScale, playSeq, stopAll, togglePlay } from '../audio/player';
@@ -14,8 +15,10 @@ import type { Feel } from '../data/techniques';
 import { VOICES, cache, chordByKey } from './pieces';
 import { drawPlay, releaseAll, resetPL } from './play';
 import { findWay, progChord } from './passing';
+import { listeningCue, studyEvents } from '../study/model';
+import { moveModel, moveSeq, moveStudy } from './views/move';
 import { hidePop, pickerJustClosed, showPicker, showPop, showSheet } from './popover';
-import { render, setDir } from './render';
+import { groupTab, render, setDir } from './render';
 import { drawLead, leadAction, leadTyped } from './views/lead';
 import { listenAction } from './views/listen';
 import { extPickerHTML, viaPickerHTML } from './views/prog';
@@ -71,7 +74,7 @@ function onClick(e: MouseEvent): void {
     case 'vclose': hidePop(); break;
     case 'vall': showPop(d.k, null, true); break;
     case 'voice': playNotes(VOICES[+d.v!].notes.map(i => i.midi)); break;
-    case 'learn': S.mfam = d.fam as Family; S.mdeg = +d.deg!; S.mroot = +d.pc!; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); window.scrollTo(0, 0); break;
+    case 'learn': S.mfam = d.fam as Family; S.mdeg = +d.deg!; S.mroot = +d.pc!; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); toTop(); break;
     case 'mfam': S.mfam = d.v as Family; stopAll(); render(); break;
     case 'mview': S.mview = d.v as State['mview']; stopAll(); render(); break;
     case 'msel': S.mdeg = +d.d!; stopAll(); render(); break;
@@ -83,10 +86,27 @@ function onClick(e: MouseEvent): void {
     case 'ecomp': playScale(earNotes(), { compare: true }); break;
     case 'eans': S.ear!.ans = +d.d!; S.escore.t++; if (S.ear!.ans === S.ear!.deg) S.escore.r++; stopAll(); render(); break;
     case 'enext': newEar(); render(); playScale(earNotes()); break;
-    case 'eopen': S.mfam = S.ear!.fam; S.mdeg = S.ear!.deg; S.mroot = S.ear!.pc; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); window.scrollTo(0, 0); break;
-    case 'tab': if (S.tab === 'listen' && S.llatch) releaseAll(); S.tab = d.v as Tab; stopAll(); render(); window.scrollTo(0, 0); break;
-    case 'from': S.from = +d.d!; S.fromSym = null; S.fromExt = null; stopAll(); render(); break;
-    case 'to': S.to = +d.d!; S.toSym = null; S.toExt = null; stopAll(); render(); break;
+    case 'eopen': S.mfam = S.ear!.fam; S.mdeg = S.ear!.deg; S.mroot = S.ear!.pc; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); toTop(); break;
+    case 'group': { const t = groupTab(d.v!); if (S.tab === 'listen' && S.llatch) releaseAll(); S.tab = t; stopAll(); render(); toTop(); break; }
+    case 'tab': if (S.tab === 'listen' && S.llatch) releaseAll(); S.tab = d.v as Tab; stopAll(); render(); toTop(); break;
+    case 'from': S.from = +d.d!; S.fromSym = null; S.fromExt = null; S.pickSide = null; stopAll(); render(); break;
+    case 'to': S.to = +d.d!; S.toSym = null; S.toExt = null; S.pickSide = null; stopAll(); render(); break;
+    case 'pickside': S.pickSide = S.pickSide === d.v ? null : (d.v as 'from' | 'to'); render(); break;
+    /* the route on Move as one resolved study: hear it, save it as A, compare, practise it, try another target */
+    case 'study-save': S.studyA = moveStudy(); stopAll(); render(); break;
+    case 'study-clear': S.studyA = null; stopAll(); render(); break;
+    case 'study-a': if (S.studyA) playSeq(studyEvents(S.studyA, 60 / S.tempo, S.studyA.events.map(() => 'study-a-mark')).map(e => ({ ...e, tones: [] })), 'study-a'); break;
+    case 'study-ab': {
+      if (!S.studyA) break;
+      const b = 60 / S.tempo, now = moveStudy(), q = moveSeq(moveModel());
+      const aEv = studyEvents(S.studyA, b, S.studyA.events.map(() => 'study-a-mark'));
+      const gap = aEv.reduce((n, e) => Math.max(n, e.t + e.dur), 0) + b;
+      const bEv = studyEvents(now, b, q.ids).map(e => ({ ...e, t: e.t + gap }));
+      playSeq([...aEv, ...bEv].map(e => ({ ...e, tones: [] })), 'study-compare'); break;
+    }
+    case 'study-focus': { const cue = listeningCue(moveStudy()); if (cue) playSeq([{ t: 0, dur: 1, tones: [], midis: [cue.fromMidi] }, { t: 1, dur: 1.6, tones: [], midis: [cue.toMidi] }], 'study-line'); break; }
+    case 'study-practice': releaseAll(); S.practiceStudy = moveStudy(); S.px = 'study'; S.tab = 'play'; stopAll(); resetPL(); render(); toTop(); break;
+    case 'study-transfer': { const hs = curChords(); let next = (S.to + 1) % hs.length, guard = 0; while ((!hs[next].landable || next === S.from) && guard++ < 12) next = (next + 1) % hs.length; S.to = next; S.toSym = null; S.toExt = null; S.tab = 'move'; stopAll(); render(); toTop(); break; }
     case 'flavor': S.flavor = d.v as Flavor; stopAll(); render(); break;
     case 'loop': S.loop = !S.loop; b.setAttribute('aria-pressed', String(S.loop)); save(); break;
     case 'tempo': S.tempo = Math.max(50, Math.min(200, S.tempo + +d.v!)); document.querySelectorAll('.tempo output').forEach(o => { o.textContent = S.tempo + ' bpm'; }); save(); break;
@@ -97,7 +117,7 @@ function onClick(e: MouseEvent): void {
     case 'padd': S.prog.push({ d: +d.d!, via: null }); S.progBad = null; stopAll(); render(); break;
     case 'pclear': S.prog = []; stopAll(); render(); break;
     case 'mapplay': { const dg = +d.d!, t = H()[dg], ap = approach(t, S.flavor)!; playChords([ap.ii, ap.V, t], ['q' + dg + 'a', 'q' + dg + 'b', 'q' + dg + 'c']); break; }
-    case 'mapopen': S.to = +d.d!; S.fromSym = null; S.toSym = null; S.fromExt = null; S.toExt = null; S.way = 'secIIV'; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); window.scrollTo(0, 0); break;
+    case 'mapopen': S.to = +d.d!; S.fromSym = null; S.toSym = null; S.fromExt = null; S.toExt = null; S.way = 'secIIV'; if (S.from === S.to) S.from = 0; S.tab = 'move'; stopAll(); render(); toTop(); break;
     case 'chart': S.chart = d.v as ScaleType; stopAll(); render(); break;
     case 'row': { const T = TYPES[S.chart], c = chordInfo(keyName(S.pc, T.keys), S.chart, +d.d!); playSeq([{ t: 0, dur: 2.6, tones: c.tones, id: 'c' + d.d }], 'x'); break; }
     case 'ext': if (d.f === 'from') S.fromExt = (d.k || null) as KindId | null; else S.toExt = (d.k || null) as KindId | null; stopAll(); render(); break;

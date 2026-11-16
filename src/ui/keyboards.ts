@@ -1,4 +1,5 @@
 import { fmt, pcOf } from '../theory/notes';
+import type { Study } from '../study/model';
 import type { Note, VoiceRole, Voicing } from '../theory/types';
 
 const WHITE = [0, 2, 4, 5, 7, 9, 11];
@@ -56,31 +57,31 @@ export function kbAbs(items: KeyItem[], minSpan: number, showN?: boolean): strin
 }
 
 /**
- * Voice-leading stage: one keyboard, two dots (the 3rd and the 7th) that slide to their place in
- * each chord of the path while it plays. Positions are precomputed (nearest note to the one before);
- * `ids` are the data-ev ids of the chords, in order. See motion.ts (vlSet).
+ * The played notes on one keyboard: the keys of the chord being played light up in its role colour, and
+ * two dots mark its 3rd and 7th AS PLAYED (their real pitch in the real voicing), sliding to their place in
+ * the next chord. Everything comes from the resolved study, so it matches what you hear.
+ * (The small chord-tone diagrams on the cards are a different thing: a reference, not the played voicing.)
+ * `ids` are the data-ev ids of the chords; `cue` marks the two pitches the listening cue talks about.
  */
-export function vlStage(seq: { tones: Note[]; labels: string[] }[], ids: string[]): string {
+export function playedStage(study: Study, ids: string[], cls: string[], cue: { fromMidi: number; toMidi: number } | null): string {
   const THIRD = ['3', '♭3', '4'], SEVENTH = ['7', '♭7', '𝄫7', '6'];
-  const near = (pc: number, ref: number): number => { let m = ref + ((pc - ref) % 12 + 18) % 12 - 6; if (m < ref - 6) m += 12; return m; };
-  const ms: ({ m: number; n: Note } | null)[][] = [];
-  let r3 = 64, r7 = 70;
-  seq.forEach(c => {
-    const a = c.labels.findIndex(l => THIRD.includes(l)), b = c.labels.findIndex(l => SEVENTH.includes(l));
-    const x = a < 0 ? null : { m: near(pcOf(c.tones[a]), r3), n: c.tones[a] }, y = b < 0 ? null : { m: near(pcOf(c.tones[b]), r7), n: c.tones[b] };
-    if (x) r3 = x.m; if (y) r7 = y.m;
-    ms.push([x, y]);
-  });
-  const all = ms.flat().filter((v): v is { m: number; n: Note } => !!v).map(v => v.m);
-  const lo = Math.floor((Math.min(...all, 60) - 2) / 12) * 12, hi = Math.max(Math.ceil((Math.max(...all, 71) + 2) / 12) * 12, lo + 24);
-  const W = 30, H = 120, BW = 18, BH = 74, pos: Record<number, number> = {};
+  const all = study.events.flatMap(e => e.midis);
+  const lo = Math.floor((Math.min(...all) - 1) / 12) * 12, hi = Math.ceil((Math.max(...all) + 2) / 12) * 12;
+  const W = 24, H = 104, BW = 14, BH = 64, pos: Record<number, number> = {};
+  const pcw = (m: number) => ((m % 12) + 12) % 12;
   let x = 0, w = '', b = '';
-  for (let m = lo; m < hi; m++) if (WHITE.includes(((m % 12) + 12) % 12)) { pos[m] = x; w += `<rect x="${x + .5}" y=".5" width="${W - 1}" height="${H}" rx="5" class="k-w"/>`; x += W; }
-  for (let m = lo; m < hi; m++) if (!WHITE.includes(((m % 12) + 12) % 12)) b += `<rect x="${pos[m - 1] + W - BW / 2}" y=".5" width="${BW}" height="${BH}" rx="3" class="k-b"/>`;
-  const spot = (m: number): { x: number; y: number } => (WHITE.includes(((m % 12) + 12) % 12) ? { x: pos[m] + W / 2, y: H - 22 } : { x: pos[m - 1] + W, y: BH - 20 });
-  const data = { ids, pos: ms.map(row => row.map(v => (v ? { ...spot(v.m), n: fmt(v.n) } : null))) };
-  const first = data.pos[0];
-  const dot = (k: number, cls: string) => `<g class="vl-dot ${cls}${first[k] ? '' : ' gone'}" style="transform:translate(${first[k]?.x ?? 0}px,${first[k]?.y ?? 0}px)"><circle r="12.5"/><text>${first[k]?.n ?? ''}</text></g>`;
-  return `<div class="vl" data-vl='${JSON.stringify(data).replace(/'/g, '&#39;')}'><div class="vl-h"><span>Voice leading</span><span class="sw"><i style="background:var(--accent)"></i>3rd</span><span class="sw"><i style="background:var(--ink)"></i>7th</span><span class="sw">they move the least</span></div>
-    <svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Keyboard showing the 3rd and 7th of each chord">${w}${b}${dot(0, 'd3')}${dot(1, 'd7')}</svg></div>`;
+  const cueSet = new Set(cue ? [cue.fromMidi, cue.toMidi] : []);
+  for (let m = lo; m < hi; m++) if (WHITE.includes(pcw(m))) { pos[m] = x; w += `<rect data-m="${m}" x="${x + .5}" y=".5" width="${W - 1}" height="${H}" rx="4" class="k-w${cueSet.has(m) ? ' cue' : ''}"/>`; x += W; }
+  for (let m = lo; m < hi; m++) if (!WHITE.includes(pcw(m))) b += `<rect data-m="${m}" x="${pos[m - 1] + W - BW / 2}" y=".5" width="${BW}" height="${BH}" rx="3" class="k-b${cueSet.has(m) ? ' cue' : ''}"/>`;
+  const spot = (m: number) => (WHITE.includes(pcw(m)) ? { x: pos[m] + W / 2, y: H - 20 } : { x: pos[m - 1] + W, y: BH - 18 });
+  const ev = study.events.map((e, i) => {
+    const dot = (list: string[]) => { const k = (e.labels ?? []).findIndex(l => list.includes(l)); return k < 0 ? null : { ...spot(e.midis[k]), n: e.names[k] }; };
+    return { keys: e.midis, col: cls[i] ?? 'r0', dots: [dot(THIRD), dot(SEVENTH)] };
+  });
+  const first = ev[0], dot = (k: number, c: string) => `<g class="vl-dot ${c}${first.dots[k] ? '' : ' gone'}" style="transform:translate(${first.dots[k]?.x ?? 0}px,${first.dots[k]?.y ?? 0}px)"><circle r="11.5"/><text>${first.dots[k]?.n ?? ''}</text></g>`;
+  const marked = w.replace(/data-m="(\d+)"/g, (t, n) => (first.keys.includes(+n) ? t + ' data-on="1"' : t)) ;
+  const markedB = b.replace(/data-m="(\d+)"/g, (t, n) => (first.keys.includes(+n) ? t + ' data-on="1"' : t));
+  const data = JSON.stringify({ ids, ev }).replace(/'/g, '&#39;');
+  return `<div class="vl" data-vl='${data}' data-role="${first.col}"><div class="vl-h"><span>Notes played</span><span class="sw"><i class="lit"></i>every note of the chord</span><span class="sw"><i style="background:var(--accent)"></i>3rd</span><span class="sw"><i style="background:var(--ink)"></i>7th, as played</span></div>
+    <svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Keyboard showing the notes played, with the 3rd and 7th marked">${marked}${markedB}${dot(0, 'd3')}${dot(1, 'd7')}</svg></div>`;
 }

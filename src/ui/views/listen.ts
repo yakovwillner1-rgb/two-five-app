@@ -1,3 +1,4 @@
+import { toTop } from '../scroll';
 import { GENRES, FEEL_LABELS } from '../../data/styles';
 import { S, curChords, curKey, curTitle, type ProgChord } from '../../state';
 import { homeKey, homeTitle } from '../../theory/home';
@@ -106,7 +107,7 @@ export function listenAction(a: string, d: DOMStringMap): boolean {
     case 'lkey': S.pc = +d.v!; L.msg = ''; break;
     case 'lmove': if (m?.dest) {
       S.fromSym = m.c.symbol; S.toSym = m.dest.symbol; S.fromExt = null; S.toExt = null;
-      S.way = m.sel ? wayKey(m.sel) : null; S.tab = 'move'; window.scrollTo(0, 0);
+      S.way = m.sel ? wayKey(m.sel) : null; S.tab = 'move'; toTop();
     } break;
     default: return false;
   }

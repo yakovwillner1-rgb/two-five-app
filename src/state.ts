@@ -1,3 +1,4 @@
+import type { Study } from './study/model';
 import type { Genre } from './data/styles';
 import type { Feel } from './data/techniques';
 import { HOME, homeChords, homeKey, homeTitle } from './theory/home';
@@ -14,13 +15,19 @@ export interface ProgChord { d: number; sym?: string; /** picked extension: the 
 /** A voicing kept on the Melody tab: chord symbol, voicing name, and its notes low to high (m = MIDI, n = note name, lab = degree, h = hand). */
 export interface KeptVoicing { sym: string; name: string; notes: { m: number; n: string; lab: string; h: 'L' | 'R' }[] }
 export interface State {
+  /** last tab used in each navigation group */
+  groupLast: Record<string, Tab>;
+  /** saved comparison A, and the study Play it practises (both saved) */
+  studyA: Study | null; practiceStudy: Study | null;
+  /** Move: which chord the chooser tray is open for (not saved) */
+  pickSide: 'from' | 'to' | null;
   mode: HomeMode; pc: number; tab: Tab; from: number; to: number; flavor: Flavor; tempo: number; loop: boolean;
   /** '' when silent, else what is playing: 'move' | 'prog' | 'scale' | 'x' */
   playing: string;
   chart: ScaleType; prog: ProgChord[];
   quiz: { pc: number; deg: number; rev: boolean } | null; score: { r: number; t: number };
   tipDone: boolean; soundOut: string | null;
-  px: 'move' | 'prog' | 'random' | 'mode' | 'lead'; pstrict: boolean; phint: boolean; pall: boolean; psound: boolean; midiOn: boolean;
+  px: 'move' | 'prog' | 'random' | 'mode' | 'lead' | 'study'; pstrict: boolean; phint: boolean; pall: boolean; psound: boolean; midiOn: boolean;
   mfam: Family; mview: ModeView; mdeg: number; mroot: number | null;
   dmode: 'spell' | 'ear'; efam: Family; ear: { fam: Family; deg: number; pc: number; ans: number | null } | null; escore: { r: number; t: number };
   voiceHover: boolean;
@@ -38,6 +45,7 @@ export interface State {
   progBad: string | null;
 }
 export const S: State = {
+  groupLast: {}, studyA: null, practiceStudy: null, pickSide: null,
   mode: 'major', pc: 0, tab: 'move', from: 0, to: 3, flavor: 'auto', tempo: 92, loop: false, playing: '', chart: 'major',
   prog: [{ d: 0, via: null }, { d: 3, via: 'secIIV' }], quiz: null, score: { r: 0, t: 0 }, tipDone: false, soundOut: null,
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
@@ -49,7 +57,7 @@ export const S: State = {
 /* Same storage key as the single-file app, so saved settings carry over. */
 const LSK = 'twofive-v1';
 const snap = () => ({
-  soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
+  groupLast: S.groupLast, studyA: S.studyA, practiceStudy: S.practiceStudy, soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
   pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way, lhold: S.lhold, llatch: S.llatch,
