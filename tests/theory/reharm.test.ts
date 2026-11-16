@@ -18,8 +18,9 @@ const melody: ANote[] = [n(0, BAR, 76), n(BAR, 960, 72), n(BAR + 960, 960, 76), 
 const run = (level: Level, mel = melody, style: { genre: 'jazz' | 'pop' | 'gospel'; feel: 'bright' | 'dark' } = jazz) => reharmonize(chart, mel, bars, C, style, level);
 
 describe('how long a passing chord lasts', () => {
-  it('light: one beat, only after a chord of four beats or more', () => {
+  it('light: one beat, only after a chord of three beats or more (a bar of 3/4 counts)', () => {
     expect(slotLength('light', 1, 4, Q)).toBe(Q);
+    expect(slotLength('light', 1, 3, Q)).toBe(Q);
     expect(slotLength('light', 1, 2, Q)).toBe(0);
     expect(slotLength('light', 2, 8, Q)).toBe(0);
   });

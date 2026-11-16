@@ -32,7 +32,7 @@ export interface Reharm { level: Level; chords: RChord[]; changes: Change[]; sum
 
 /** What each level may do. Tunable, like the style weights. */
 export const LEVELS: Record<Level, { label: string; /** most passing chords at one spot */ maxChords: number; /** ways above this tension are not used */ maxTension: number; /** a chord must last this many beats before anything is put in front of the next */ minBeats: number; about: string }> = {
-  light: { label: 'Light', maxChords: 1, maxTension: 0.45, minBeats: 4, about: 'One calm passing chord, only after a chord that lasts four beats or more, on its last beat.' },
+  light: { label: 'Light', maxChords: 1, maxTension: 0.45, minBeats: 3, about: 'One calm passing chord, only after a chord that lasts three beats or more, on its last beat.' },
   medium: { label: 'Medium', maxChords: 2, maxTension: 0.75, minBeats: 2, about: 'One or two passing chords wherever a chord lasts two beats or more.' },
   wild: { label: 'Wild', maxChords: 4, maxTension: 1, minBeats: 2, about: 'The tense ways first (Coltrane cycles, upper structures, tritone subs), up to four passing chords.' },
 };

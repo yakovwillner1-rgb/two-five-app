@@ -493,7 +493,7 @@ main{flex:1;padding:22px 0 40px}
 .rfilebtn{cursor:pointer;display:inline-flex;align-items:center}
 .rerr{margin:12px 0 0;color:var(--c5)}
 .rsteps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.92rem}
-.rbars{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:10px}
+.rbars{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:10px}
 .rbar{position:relative;border:1px solid var(--line);border-radius:12px;padding:16px 6px 6px;background:var(--panel2);min-width:0}
 .rbn{position:absolute;left:8px;top:2px;font-family:var(--mono);font-size:.64rem;color:var(--muted)}
 .rbc{display:flex;gap:4px;min-width:0}

@@ -37,6 +37,8 @@ export function viewGuide(): string {
    <li>Keep a voicing and move to the next chord: the list is then ordered by the smoothest voice leading, the least movement from the voicing you kept.</li>
    <li>Send the kept voicings to Play it to practise them note for note.</li>
   </ul>
+  <h3>Your own tunes</h3>
+  <p>The <b>Reharm</b> tab takes a tune you bring: a MIDI file from Logic, a score or lead sheet exported as MusicXML, or a chord chart you type. It shows the chords, a voicing for each one with the voice leading between them, and three reharmonizations. A reharm here means adding passing chords between your chords. Under a melody, a new chord is only used when the melody note over it is one of its chord tones or available tensions.</p>
   <h3>Practice path</h3>
   <ol>
    <li>On the Move tab, start on I and land on IV. Play and loop it until the move feels automatic.</li>

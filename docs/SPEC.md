@@ -61,6 +61,13 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   structures, spread, cluster. "Keep" builds a voice-leading line; the next chord's voicings are then
   ordered smoothest first, with each voice's motion. Kept voicings can be practised in Play it.
   Optional "Goes to" chord (decides the scale) and genre (its favorite voicing types come first).
+- **Reharm** (Phase 3): bring in a tune as a MIDI file (.mid), a MusicXML score or lead sheet
+  (.musicxml, .xml, .mxl) or a typed chord chart. The app shows the key and the chord chart (heard
+  from the notes, or the written chord symbols), each chord correctable; a voicing for every chord
+  with the voice leading from the chord before; and light / medium / wild reharms in the chosen
+  genre and feel, each change explained. Under a melody only chords the melody fits are used. Play
+  (synth or MIDI out), download a .mid on the tune's own bars and tempo, or practise in Play it.
+  PDFs and photos are not read (see OPEN_QUESTIONS 60).
 - **Cheat sheet**: every chord in the key with its 2-5.
 - **Modes**: Major / Melodic minor / Harmonic minor families, "Same root" vs "From one scale",
   brightness ladder, formula vs major, character note, drone playback, compare with major.
@@ -236,5 +243,7 @@ play/export → drag into Logic → lines up with the original region.
       waiting on Ralph; IAC/Logic playback not checked with real devices)
 - [x] Phase 2 Lead voicing (Melody tab; Claude's picks for 44–56 and open points 57–58 in `docs/OPEN_QUESTIONS.md`;
       not checked with a real MIDI keyboard or on iPad)
-- [ ] Phase 3 MIDI reharm
+- [x] Phase 3 MIDI reharm, plus MusicXML scores / lead sheets and typed charts (Reharm tab; open
+      points in `docs/OPEN_QUESTIONS.md` 59–68; **not yet tried with a real Logic export**, which is
+      the spec's "done when")
 - [ ] Phase 4 Practice + polish
