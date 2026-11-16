@@ -405,8 +405,8 @@ export function melodyCheck(c: PChord, melody: number, next: PChord | null, key:
       fixes.push({ kind: 'reharm', chord: h, text: `Reharmonize with ${h.symbol}: ${name} is its ${ordOf(h.labels[i])}${shared.length ? `, and it shares ${shared.map(fmt).join(', ')} with ${c.symbol}` : ''}.` });
     });
   const text = p.role === 'avoid'
-    ? `${name} is the ${ordOf(p.label)} of ${c.symbol}: an avoid note. It sits a half step above a chord tone and blurs the chord when it is held on top.`
-    : `${name} is not in ${fmt(scale.root)} ${scale.name}, the scale of ${c.symbol} here: it clashes when it is held on top.`;
+    ? `${name} is the ${ordOf(p.label)} of ${c.symbol}: a potential rub in this palette. Compare the actual voicing and melodic resolution.`
+    : `${name} is not in ${fmt(scale.root)} ${scale.name}, the scale of ${c.symbol} here: compare another palette or an intentional melodic tension.`;
   return { ...base, text, fixes };
 }
 

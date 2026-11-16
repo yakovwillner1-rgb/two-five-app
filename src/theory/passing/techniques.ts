@@ -37,7 +37,7 @@ const secIIV: Technique = (_from, to, _key, ctx) => {
     return {
       variant: dark ? 'dark' : 'bright', variantLabel: dark ? 'dark' : 'bright', chords: [ii, V], romanNumerals: [(dark ? 'iiø7' : 'ii7') + ctx.of, 'V7' + ctx.of],
       fn: `${ii.symbol} → ${V.symbol} is the ii–V of ${to.symbol}: for a moment ${to.symbol} is treated as home.`,
-      pull: `Roots fall in fifths (${fmt(ii.root)} → ${fmt(V.root)} → ${fmt(to.root)}), the strongest root motion there is.`,
+      pull: `Roots fall in fifths (${fmt(ii.root)} → ${fmt(V.root)} → ${fmt(to.root)}), a common directed motion in functional jazz harmony.`,
       source: fmt(to.root) + (dark ? ' harmonic minor' : minor ? ' melodic minor' : ' major'),
     };
   };
@@ -137,7 +137,7 @@ const lineCliche: Technique = (from, _to, key) => {
     variant: 'minor', chords: cs, romanNumerals: rns(cs, key), replacesFrom: true,
     fn: `Line cliché on ${fmt(r)} minor, played in place of ${from.symbol}: ${names(cs)}. The chord stays, one voice moves.`,
     pull: `One inner voice walks down by half steps (${voice}) and keeps the harmony moving toward the next chord.`,
-    source: fmt(r) + ' melodic minor',
+    source: undefined,
   }];
 };
 
