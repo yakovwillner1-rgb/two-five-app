@@ -95,7 +95,7 @@ function targetHTML(): string {
   const P = ses!;
   if (P.done) {
     const st0 = P.steps[0], what = st0.kind === 'scale' ? st0.seq.length + ' notes' : P.steps.length + ' chords';
-    return `<div class="pdone"><div class="eyebrow">Finished</div><div class="pbig" style="color:#59d18f">${P.wrong === 0 ? 'Clean run' : 'Done'}</div>
+    return `<div class="pdone"><div class="eyebrow">Finished</div><div class="pbig" style="color:var(--ok)">${P.wrong === 0 ? 'Clean run' : 'Done'}</div>
       <p class="phow">${what} in <b>${elapsed.toFixed(1)} seconds</b> with <b>${P.wrong}</b> wrong note${P.wrong === 1 ? '' : 's'}.</p>
       <div class="controls" style="margin-top:14px"><button class="pill go" data-a="pagain">Go again</button></div></div>`;
   }
@@ -132,7 +132,7 @@ function pianoSVG(): string {
     }
   }
   if (S.tab === 'lead') Object.assign(ghost, leadHook.ghost());
-  const col = { ok: '#59d18f', bad: 'var(--c5)', on: 'var(--c0)' }, NN = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'], name = (m: number) => NN[mod(m, 12)];
+  const col = { ok: 'var(--ok)', bad: 'var(--c5)', on: 'var(--c0)' }, NN = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'], name = (m: number) => NN[mod(m, 12)];
   const pos: Record<number, number> = {};
   let x = 0;
   for (let m = lo; m <= hi; m++) if (wh.includes(mod(m, 12))) { pos[m] = x; x += W; }
@@ -149,7 +149,7 @@ function pianoSVG(): string {
       const X = pos[m - 1] + W - BW / 2;
       b += `<rect data-n="${m}" x="${X}" y=".5" width="${BW}" height="${BH}" rx="3" class="pk-b"${h ? ` style="fill:${col[h]}"` : ''}/>`;
       if (g && !h) b += `<circle cx="${X + BW / 2}" cy="${BH - 20}" r="6.5" fill="var(--gold)"/>`;
-      if (g || h) b += `<text x="${X + BW / 2}" y="${BH - 6}" class="pkl kb" style="fill:${h ? '#0d1015' : 'var(--gold)'}">${g || name(m)}</text>`;
+      if (g || h) b += `<text x="${X + BW / 2}" y="${BH - 6}" class="pkl kb" style="fill:${h ? 'var(--on-fill)' : 'var(--gold)'}">${g || name(m)}</text>`;
     }
   }
   return `<svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Piano keyboard">${w}${b}</svg>`;

@@ -1,0 +1,68 @@
+/* ==========================================================================
+   Design tokens: the one place to tune the look. See docs/DESIGN.md.
+   Light is the default; dark is html[data-theme="dark"] (Light/Dark switch in the header).
+   Role colors (they carry meaning everywhere): start = periwinkle (c0), ii = mint (c2),
+   V = coral (c5), land = sunflower (gold). One extra accent, electric violet, for primary actions.
+   Every role fill takes --on-fill text (dark ink): checked >= 4.5:1 in both themes.
+   ========================================================================== */
+:root{
+  color-scheme:light;
+
+  /* surfaces */
+  --bg:#EEF8F8; --bg-glow:rgba(0,184,160,.14);
+  --panel:#FFFFFF; --panel2:#E2F3F2; --line:#C9E4E3; --bar:rgba(238,248,248,.9);
+  --scrim:rgba(16,40,46,.45);
+  /* text (on --bg / --panel): ink 14:1, ink2 9:1, muted 5.6:1 */
+  --ink:#10282E; --ink2:#2B4950; --muted:#456168;
+  /* roles */
+  --c0:#8199FF; --c2:#1FD1B2; --c5:#FF6B5B; --gold:#FFCF33;
+  --on-fill:#10282E;            /* text on any role fill or other bright fill */
+  /* accent (primary actions, selected, rewards) */
+  --accent:#7B2FF7; --on-accent:#FFFFFF; --accent-text:#6A1FD8; --accent-soft:rgba(123,47,247,.12);
+  --ok:#0A7A55; --ok-fill:#4ADE9E; --warn-text:#9A5A00;
+  /* keyboard */
+  --key-white:#FFFFFF; --key-stroke:#9CC7C6; --key-black:#10282E; --key-label:#10282E;
+
+  /* type */
+  --display:'Outfit','Noto Music',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --body:'Outfit','Noto Music',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Outfit','Noto Music',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --fs-base:18px;
+
+  /* shape */
+  --r-xs:10px; --r-sm:14px; --r-md:18px; --r-lg:24px; --r-xl:28px; --r-pill:999px;
+  --edge:4px;                   /* the raised bottom edge of buttons, chips, tiles */
+
+  /* shadows: soft = cards, edge = a raised button (compresses on press), pop = popovers */
+  --shadow-soft:0 3px 0 var(--line);
+  --shadow-edge:0 var(--edge) 0 color-mix(in srgb,var(--ink) 22%,transparent);
+  --shadow-block:0 6px 0 color-mix(in srgb,var(--ink) 28%,transparent);
+  --shadow-pop:0 24px 60px -12px rgba(16,40,46,.35);
+  --glow:0 0 0 3px var(--rc),0 10px 26px -6px var(--rc);
+
+  /* motion (reduced-motion zeroes these) */
+  --t-fast:120ms; --t-med:220ms; --t-slow:420ms;
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);   /* overshoots: pops */
+  --ease-out:cubic-bezier(.22,1,.36,1);
+}
+
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0F1B24; --bg-glow:rgba(123,47,247,.18);
+  --panel:#182733; --panel2:#213445; --line:#2F4558; --bar:rgba(15,27,36,.9);
+  --scrim:rgba(0,0,0,.6);
+  --ink:#F1F8FA; --ink2:#C9DBE1; --muted:#9DB4BD;
+  --c0:#8199FF; --c2:#2BDCBD; --c5:#FF7A6B; --gold:#FFD54A;
+  --on-fill:#0B1A21;
+  --accent:#9B6BFF; --on-accent:#0B1A21; --accent-text:#C4A8FF; --accent-soft:rgba(155,107,255,.2);
+  --ok:#4ADE9E; --ok-fill:#4ADE9E; --warn-text:#FFC45C;
+  --key-white:#F4FAFB; --key-stroke:#0B1A21; --key-black:#0B1A21; --key-label:#0B1A21;
+  --shadow-soft:0 3px 0 rgba(0,0,0,.35);
+  --shadow-edge:0 var(--edge) 0 rgba(0,0,0,.45);
+  --shadow-block:0 6px 0 rgba(0,0,0,.4);
+  --shadow-pop:0 24px 60px -12px rgba(0,0,0,.75);
+}
+
+@media (prefers-reduced-motion:reduce){
+  :root{--t-fast:0ms;--t-med:0ms;--t-slow:0ms}
+}

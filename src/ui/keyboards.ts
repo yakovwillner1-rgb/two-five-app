@@ -48,7 +48,7 @@ export function kbAbs(items: KeyItem[], minSpan: number, showN?: boolean): strin
     });
     [1, 3, 6, 8, 10].forEach(pc => {
       const m = base + pc, x = (o * 7 + WHITE.indexOf(pc - 1) + 1) * W - BW / 2, h = at[m];
-      b += `<rect x="${x}" y=".5" width="${BW}" height="${BH}" rx="2" class="bk"${h ? ` style="fill:${h.col};stroke:#06080b"` : ''}/>`;
+      b += `<rect x="${x}" y=".5" width="${BW}" height="${BH}" rx="2" class="bk"${h ? ` style="fill:${h.col};stroke:var(--key-black)"` : ''}/>`;
       if (h) { b += `<text x="${x + BW / 2}" y="${BH - (showN ? 15 : 6)}" class="kl kb">${h.lab}</text>`; if (showN) b += `<text x="${x + BW / 2}" y="${BH - 5}" class="kl kb">${fmt(h.n)}</text>`; }
     });
   }
