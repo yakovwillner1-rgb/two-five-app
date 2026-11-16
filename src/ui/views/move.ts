@@ -11,6 +11,7 @@ import type { Chord, HomeChord } from '../../theory/types';
 import { extensionOptions, scaleChoices } from '../../theory/tensions';
 import { optionChip, scaleChips, tensionLine } from '../extensions';
 import { chordKeys, esc, extChoices, findWay, pickChord, playTones, rankedWays, wayButton, wayKey, withExt } from '../passing';
+import { vlStage } from '../keyboards';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
 /* Move: get from one chord to another. Every passing technique is a "way"; the 2-5 is one of them. */
@@ -78,13 +79,14 @@ export function viewMove(): string {
   const chords = s ? s.chords : [], showFrom = !s?.replacesFrom;
   const seq = [...(showFrom ? [m.from] : []), ...chords, m.to];
   const cls = [...(showFrom ? ['r0'] : []), ...chords.map((_c, j) => (j === chords.length - 1 ? 'r5' : 'r2')), 'r1'];
-  const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string) => `<div class="blk ${cl}" data-ev="${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bt">${top}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div></div>`;
+  const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string) => `<div class="blk ${cl}" data-ev="${id}" data-flip="h:${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bt">${top}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div></div>`;
   const fromRef = chartFrom ? cref(chartFrom) : undefined, toRef = chartTo ? cref(chartTo) : undefined;
   const path = [
     ...(showFrom ? [blk(m.from, 'r0', 'mf', romanNumeral(m.from, key) + ' · start', 'start chord', fromRef)] : []),
     ...chords.map((c, j) => { const ch = chartOf(m, j); return blk(c, cls[(showFrom ? 1 : 0) + j], 'm' + j, s!.romanNumerals[j], s!.name.toLowerCase(), ch ? cref(ch) : undefined); }),
     blk(m.to, 'r1', 'mt', romanNumeral(m.to, key) + ' · land', 'target', toRef),
-  ].join('<div class="ar">→</div>');
+  ].join('<div class="ar" aria-hidden="true"><i></i></div>');
+  const ids = [...(showFrom ? ['mf'] : []), ...chords.map((_c, j) => 'm' + j), 'mt'];
   const cards = [
     ...chords.map((c, j) => detail(c, cls[(showFrom ? 1 : 0) + j], s!.romanNumerals[j], 'm' + j, chartOf(m, j))),
     detail(m.to, 'r1', romanNumeral(m.to, key) + ' · target', 'mt', chartTo),
@@ -105,13 +107,13 @@ export function viewMove(): string {
     + (s.ext?.lines.length ? `<p><span class="whyl">Extensions</span>${s.ext.lines.join('<br>')}</p>` : '') : '';
   const extOn = !!s?.ext;
   return `<div class="stack">${tip}
-   <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2>Get from <em>${m.from.symbol}</em> to <em>${m.to.symbol}</em></h2></div>
+   <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2 class="sr">Get from ${m.from.symbol} to ${m.to.symbol}</h2></div>
+   <div class="stage"><div class="pathx">${path}</div>${vlStage(seq, ids)}</div>
    <div class="panel pick">
      <span class="lab">Start on</span><div>${tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true)}${input('from', S.fromSym, m.badFrom)}${extRow('from', m.fromChoices, m.from)}</div>
      <span class="lab">Land on</span><div>${tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1')}${input('to', S.toSym, m.badTo)}${extRow('to', m.toChoices, m.to)}</div>
      <p class="small extnote">${extOn ? 'The passing chords below took extensions that connect to yours, and the ways are re-ranked by how smoothly your added notes carry through (the “ext” mark).' : 'Pick an extension on either chord: the passing chords pick up matching extensions and the ways re-rank.'}</p>
    </div>
-   <div class="pathx">${path}</div>
    <div class="panel wayspanel">
      <div class="waysh"><h3 style="margin:0">Ways to get there</h3><span class="small">${m.shown.length} for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()} first. Tap one to use it.</span></div>
      <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>

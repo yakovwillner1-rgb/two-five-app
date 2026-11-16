@@ -5,7 +5,9 @@ import { midi } from '../midi/input';
 import { S, curMode, curTitle } from '../state';
 import { fmt, mod, note, pcOf } from '../theory/notes';
 import { PlaySession, buildSteps, voicingStep, type Step } from '../theory/playcheck';
+import { burstAt, confetti, countUp, reduced, ripple } from './motion';
 import { cref, soundBox } from './pieces';
+import { ROLE_VAR, roleOfSymbol } from './role';
 import type { Flavor } from '../theory/types';
 import { moveModel } from './views/move';
 import { progSteps } from './views/prog';
@@ -19,6 +21,8 @@ export const leadHook = { changed: (_held: Set<number>): void => {}, ghost: (): 
 /** Let go of every held note (latched on-screen keys). */
 export function releaseAll(): void { [...held].forEach(noteOff); }
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
+/* combo / accuracy of this run: a unit is one chord (or one scale note); it is clean when no wrong note came in it */
+let combo = 0, bestCombo = 0, units = 0, cleanUnits = 0, unitKey = '', unitWrong = 0, scoreShown = false, comboBump = false;
 let chkT: ReturnType<typeof setTimeout> | undefined, flashT: ReturnType<typeof setTimeout> | undefined;
 
 /* Play it checks chords it has a scale for: the chords of the key and their 2-5s. A 2-5 chosen on the
@@ -38,6 +42,7 @@ const playSig = (): string => JSON.stringify([S.px, S.pc, S.mode, S.from, S.to, 
 export function resetPL(): void {
   clearTimeout(chkT);
   sig = playSig(); t0 = 0; elapsed = 0;
+  combo = bestCombo = units = cleanUnits = 0; unitKey = ''; unitWrong = 0; scoreShown = false; comboBump = false;
   ses = new PlaySession(steps(), S.pstrict, held, S.px === 'random' ? steps : undefined);
 }
 
@@ -46,7 +51,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   const out = getOut();
   if (src === 'screen' && out) { screenOn.add(n); sendOn(out, n, 85); }
   else if (!out && (src === 'screen' || S.psound)) { const c = audio(); tone(n, c.currentTime + 0.01, 1.6, 0.15); }
-  if (S.tab !== 'play' || !ses) { held.add(n); if (S.tab === 'listen') heldHook.changed(held); if (S.tab === 'lead') leadHook.changed(held); return; }
+  if (S.tab !== 'play' || !ses) { held.add(n); if (S.tab === 'listen') heldHook.changed(held); if (S.tab === 'lead') leadHook.changed(held); keyRipple(n, 'on'); return; }
   if (!ses.done && !t0) t0 = performance.now();
   const r = ses.noteOn(n);
   if (!r.counted) { drawPlay(); return; }
@@ -54,6 +59,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   if (r.finished) finish();
   if (r.needsChordCheck) { clearTimeout(chkT); chkT = setTimeout(checkChord, 90); }
   drawPlay();
+  keyRipple(n, r.mark === 'bad' ? 'bad' : r.mark === 'ok' ? 'ok' : 'on');
 }
 export function noteOff(n: number): void {
   if (screenOn.has(n)) { screenOn.delete(n); const o = getOut(); if (o) sendOff(o, n); }
@@ -65,13 +71,20 @@ export function noteOff(n: number): void {
 }
 function checkChord(): void {
   if (!ses) return;
+  const st = ses.steps[ses.i], sym = st && st.kind === 'chord' ? st.chord.symbol : st && st.kind === 'voicing' ? st.symbol : '';
   const r = ses.checkChord();
   if (r === 'none') return;
   flash('good');
+  burstAt(document.getElementById('ptarget'), sym ? ROLE_VAR[roleOfSymbol(sym)] : 'var(--c2)', 18);
   if (r === 'finished') finish();
   drawPlay();
 }
 function finish(): void { elapsed = (performance.now() - t0) / 1000; flash('good'); }
+/** A ring from the pressed key, in the colour of its mark (green right, red wrong, blue just held). */
+function keyRipple(n: number, mark: 'ok' | 'bad' | 'on'): void {
+  const K = document.getElementById('pkwrap');
+  if (K) ripple(K, K.querySelector(`[data-n="${n}"]`), mark === 'ok' ? 'var(--ok-fill)' : mark === 'bad' ? 'var(--c5)' : 'var(--c0)');
+}
 function flash(k: 'good' | 'bad'): void {
   const e = document.getElementById('ptarget');
   if (!e) return;
@@ -90,14 +103,17 @@ function midiHTML(): string {
   } as Record<string, [string, string, string]>)[midi.state];
   return `<span class="dot ${M[0]}"></span><span class="mtext">${M[1]}</span>${M[2] ? `<button class="pill sm go" data-a="midi">${M[2]}</button>` : ''}${midi.acc ? `<span class="sndslot">${soundBox()}</span>` : ''}`;
 }
-const pstats = (): string => `<div class="pstats"><span>Wrong notes <b>${ses!.wrong}</b></span>${S.px === 'random' ? `<span>Rounds done <b>${ses!.rounds}</b></span>` : ''}<button class="pill sm" data-a="pagain">Restart</button></div>`;
+const pstats = (): string => `<div class="pstats">${combo >= 2 ? `<span class="combo${combo >= 5 ? ' hot' : ''}${comboBump ? ' bump' : ''}">combo <b>×${combo}</b></span>` : ''}<span>Wrong notes <b>${ses!.wrong}</b></span>${S.px === 'random' ? `<span>Rounds done <b>${ses!.rounds}</b></span>` : ''}<button class="pill sm" data-a="pagain">Restart</button></div>`;
 function targetHTML(): string {
   const P = ses!;
   if (P.done) {
     const st0 = P.steps[0], what = st0.kind === 'scale' ? st0.seq.length + ' notes' : P.steps.length + ' chords';
-    return `<div class="pdone"><div class="eyebrow">Finished</div><div class="pbig" style="color:#59d18f">${P.wrong === 0 ? 'Clean run' : 'Done'}</div>
-      <p class="phow">${what} in <b>${elapsed.toFixed(1)} seconds</b> with <b>${P.wrong}</b> wrong note${P.wrong === 1 ? '' : 's'}.</p>
-      <div class="controls" style="margin-top:14px"><button class="pill go" data-a="pagain">Go again</button></div></div>`;
+    const acc = units ? Math.round((cleanUnits / units) * 100) : 100, stars = P.wrong === 0 ? 3 : acc >= 70 ? 2 : 1;
+    return `<div class="score" data-time="${elapsed}" data-acc="${acc}" data-combo="${bestCombo}"><div class="eyebrow">Finished · ${what}</div><div class="big">${P.wrong === 0 ? 'Clean run!' : 'Nice work'}</div>
+      <div class="stars" aria-label="${stars} of 3 stars">${[1, 2, 3].map(k => `<span class="${k <= stars ? '' : 'off'}">★</span>`).join('')}</div>
+      <div class="stats3"><div class="stat"><b id="sc-time">0.0s</b><span>Time</span></div><div class="stat"><b id="sc-acc">0%</b><span>Accuracy</span></div><div class="stat"><b id="sc-combo">×0</b><span>Best combo</span></div></div>
+      <p class="phow">${P.wrong} wrong note${P.wrong === 1 ? '' : 's'}</p>
+      <div class="controls" style="margin-top:10px"><button class="pill go" data-a="pagain">Go again</button></div></div>`;
   }
   const st = P.steps[P.i];
   if (st.kind === 'scale') {
@@ -106,7 +122,7 @@ function targetHTML(): string {
       <div class="eyebrow" style="margin-top:14px">Mode scale · up one octave and back down</div><div class="pbig">${fmt(m.notes[0])} ${m.name}</div>
       <p class="phow">Next note: <b>${fmt(st.names[P.si])}</b>. Any octave counts.</p>${pstats()}`;
   }
-  const chips = `<div class="pchips">${P.steps.map((x, i) => `<span class="pc ${i < P.i ? 'done' : i === P.i ? 'cur' : ''}">${x.kind === 'chord' ? x.chord.symbol : x.kind === 'voicing' ? x.symbol : ''}</span>`).join('<span class="arr">→</span>')}</div>`;
+  const chips = `<div class="pchips">${P.steps.map((x, i) => `<span class="pc ${x.kind === 'chord' ? roleOfSymbol(x.chord.symbol) : x.kind === 'voicing' ? roleOfSymbol(x.symbol) : ''} ${i < P.i ? 'done' : i === P.i ? 'cur' : ''}">${x.kind === 'chord' ? x.chord.symbol : x.kind === 'voicing' ? x.symbol : ''}</span>`).join('<span class="arr">→</span>')}</div>`;
   if (st.kind === 'voicing') {
     return `${chips}<div class="eyebrow" style="margin-top:14px">${st.label}</div><div class="pbig">${st.symbol}</div>
       <p class="phow">Play this voicing, bottom to top: <b>${st.names.join(' · ')}</b>. Any octave counts.</p>${pstats()}`;
@@ -132,7 +148,7 @@ function pianoSVG(): string {
     }
   }
   if (S.tab === 'lead') Object.assign(ghost, leadHook.ghost());
-  const col = { ok: '#59d18f', bad: 'var(--c5)', on: 'var(--c0)' }, NN = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'], name = (m: number) => NN[mod(m, 12)];
+  const NN = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'], name = (m: number) => NN[mod(m, 12)];
   const pos: Record<number, number> = {};
   let x = 0;
   for (let m = lo; m <= hi; m++) if (wh.includes(mod(m, 12))) { pos[m] = x; x += W; }
@@ -141,25 +157,48 @@ function pianoSVG(): string {
     const isW = wh.includes(mod(m, 12)), h = held.has(m) ? (P?.marks[m] || 'on') : '', g = ghost[m];
     if (isW) {
       const X = pos[m];
-      w += `<rect data-n="${m}" x="${X + .5}" y=".5" width="${W - 1}" height="${H}" rx="4" class="pk-w"${h ? ` style="fill:${col[h]}"` : ''}/>`;
-      if (g && !h) w += `<circle cx="${X + W / 2}" cy="${H - 30}" r="8" fill="var(--gold)"/>`;
+      w += `<rect data-n="${m}" x="${X + .5}" y=".5" width="${W - 1}" height="${H}" rx="4" class="pk-w${h ? ' k-' + h : ''}"/>`;
+      if (g && !h) w += `<circle class="ghostdot" cx="${X + W / 2}" cy="${H - 30}" r="9" fill="var(--gold)"/>`;
       if (g || h) w += `<text x="${X + W / 2}" y="${H - 10}" class="pkl">${g || name(m)}</text>`;
       else if (m === 60) w += `<text x="${X + W / 2}" y="${H - 10}" class="pkl c4">C4</text>`;
     } else {
       const X = pos[m - 1] + W - BW / 2;
-      b += `<rect data-n="${m}" x="${X}" y=".5" width="${BW}" height="${BH}" rx="3" class="pk-b"${h ? ` style="fill:${col[h]}"` : ''}/>`;
-      if (g && !h) b += `<circle cx="${X + BW / 2}" cy="${BH - 20}" r="6.5" fill="var(--gold)"/>`;
-      if (g || h) b += `<text x="${X + BW / 2}" y="${BH - 6}" class="pkl kb" style="fill:${h ? '#0d1015' : 'var(--gold)'}">${g || name(m)}</text>`;
+      b += `<rect data-n="${m}" x="${X}" y=".5" width="${BW}" height="${BH}" rx="3" class="pk-b${h ? ' k-' + h : ''}"/>`;
+      if (g && !h) b += `<circle class="ghostdot" cx="${X + BW / 2}" cy="${BH - 20}" r="7" fill="var(--gold)"/>`;
+      if (g || h) b += `<text x="${X + BW / 2}" y="${BH - 6}" class="pkl kb" style="fill:${h ? 'var(--on-fill)' : 'var(--gold)'}">${g || name(m)}</text>`;
     }
   }
   return `<svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Piano keyboard">${w}${b}</svg>`;
 }
 export function drawMidi(): void { const M = document.getElementById('midibar'); if (M) M.innerHTML = midiHTML(); }
 export function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && (ses || S.tab === 'listen' || S.tab === 'lead')) K.innerHTML = pianoSVG(); }
+function trackUnits(): void {
+  const P = ses!, key = P.done ? 'done' : `${P.rounds}.${P.i}.${P.si}`;
+  if (P.wrong > unitWrong && combo > 0) combo = 0;
+  if (key !== unitKey) {
+    if (unitKey) { units++; if (P.wrong === unitWrong) { cleanUnits++; combo++; bestCombo = Math.max(bestCombo, combo); comboBump = true; } else combo = 0; }
+    unitKey = key; unitWrong = P.wrong;
+  }
+}
 export function drawPlay(): void {
   if (S.tab !== 'play' || !ses) return;
-  const T = document.getElementById('ptarget');
-  if (T) T.innerHTML = targetHTML();
+  trackUnits();
+  const T = document.getElementById('ptarget'), P = ses;
+  if (T && !(P.done && scoreShown && T.querySelector('.score'))) {
+    T.innerHTML = targetHTML(); comboBump = false;
+    const st = P.done ? null : P.steps[P.i], sym = st && st.kind === 'chord' ? st.chord.symbol : st && st.kind === 'voicing' ? st.symbol : '';
+    T.style.setProperty('--rc', P.done ? 'var(--accent)' : sym ? ROLE_VAR[roleOfSymbol(sym)] : 'var(--c0)');
+    if (P.done && !scoreShown) {
+      scoreShown = true;
+      const sc = T.querySelector<HTMLElement>('.score');
+      if (sc) {
+        countUp(T.querySelector('#sc-time'), +sc.dataset.time!, 900, v => v.toFixed(1) + 's');
+        countUp(T.querySelector('#sc-acc'), +sc.dataset.acc!, 1000, v => Math.round(v) + '%', 150);
+        countUp(T.querySelector('#sc-combo'), +sc.dataset.combo!, 800, v => '×' + Math.round(v), 300);
+        if (P.wrong === 0 && !reduced()) confetti(80);
+      }
+    }
+  }
   drawMidi(); drawKeys();
 }
 export function bindPiano(): void {

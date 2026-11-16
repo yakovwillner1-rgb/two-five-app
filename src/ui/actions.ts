@@ -1,3 +1,5 @@
+import { rotateCircle } from './motion';
+import { toggleTheme } from './theme';
 import { playChords, playNotes, playScale, playSeq, stopAll, togglePlay } from '../audio/player';
 import { bindMidi, connectMIDI } from '../midi/input';
 import { S, curChords, curMode, earNotes, modeRootPc, rootCtx, save, setMode, type State, type Tab } from '../state';
@@ -49,7 +51,11 @@ function onClick(e: MouseEvent): void {
     case 'kprev': step(-1); break;
     case 'knext': step(1); break;
     case 'kpick': if (pickerJustClosed()) break; showPicker(b); break;
-    case 'pick': if (rootCtx()) S.mroot = +d.pc!; else { setMode(d.m as HomeMode); S.pc = +d.pc!; } stopAll(); render(); break;
+    case 'pick': {
+      const go = () => { if (rootCtx()) S.mroot = +d.pc!; else { setMode(d.m as HomeMode); S.pc = +d.pc!; } stopAll(); render(); };
+      if (!rotateCircle(b, go)) go();
+      break;
+    }
     case 'px': S.px = d.v as State['px']; render(); break;
     case 'pstrict': S.pstrict = d.v === '1'; render(); break;
     case 'phint': S.phint = !S.phint; render(); break;
@@ -59,6 +65,7 @@ function onClick(e: MouseEvent): void {
     case 'pagain': resetPL(); drawPlay(); break;
     case 'tipx': S.tipDone = true; render(); break;
     case 'pchord': { const c = chordByKey(d.chord); if (c) playSeq([{ t: 0, dur: 2.4, tones: c.tones, id: d.ev }], 'x'); break; }
+    case 'theme': toggleTheme(); break;
     case 'vtog': S.voiceHover = !S.voiceHover; hidePop(); b.setAttribute('aria-checked', String(S.voiceHover)); save(); break;
     case 'vopen': showPop(d.k, b, true); break;
     case 'vclose': hidePop(); break;

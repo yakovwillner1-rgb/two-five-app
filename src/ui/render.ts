@@ -4,6 +4,7 @@ import { S, curMode, curTitle, modeRootPc, rootCtx, save, type Tab } from '../st
 import { HOME, homeKey } from '../theory/home';
 import { fmt } from '../theory/notes';
 import type { HomeMode } from '../theory/types';
+import { flipPlay, flipSnapshot } from './motion';
 import { cache, resetReg, soundBox, tempoHTML } from './pieces';
 import { bindPiano, drawPlay, viewPlay } from './play';
 import { hidePop } from './popover';
@@ -82,7 +83,9 @@ export function render(): void {
   cache.seqs = {}; cache.scales = {};
   renderShell();
   const v = $('view');
+  flipSnapshot(v);
   v.innerHTML = VIEWS[S.tab]();
+  flipPlay(v);
   if (dir) { v.classList.remove('slide-l', 'slide-r'); void v.offsetWidth; v.classList.add(dir); dir = ''; }
   if (S.tab === 'lead') { drawLead(); bindPiano(); if (S.midiOn && !midi.acc && midi.state === 'idle') connectMIDI(); }
   if (S.tab === 'listen') { drawListen(); bindPiano(); if (S.midiOn && !midi.acc && midi.state === 'idle') connectMIDI(); }

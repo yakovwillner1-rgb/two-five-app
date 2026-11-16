@@ -7,22 +7,25 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" href="/icon-192.png">
-<meta name="theme-color" content="#0d1015">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#EEF8F8">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="2-5">
 <title>2-5 Into Anything</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,800;1,9..144,500;1,9..144,700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Music&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Music&display=swap" rel="stylesheet">
+<meta name="color-scheme" content="light dark">
+<script>try{if(localStorage.getItem('twofive-theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
 </head>
 <body>
+<div class="blobs" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 <div class="app">
   <aside class="side" id="side"></aside>
   <div class="mainc">
     <header class="hdr"><div class="hdr-in">
       <span class="brand-sm">2‑5 <em>into anything</em></span>
       <div class="keyctl"><button class="kar" data-a="kprev" aria-label="Previous key">‹</button><button class="kbtn" id="kbtn" data-a="kpick" aria-haspopup="dialog"></button><button class="kar" data-a="knext" aria-label="Next key">›</button></div>
-      <div id="mode"></div><span class="grow"></span><span class="htitle" id="htitle"></span>
+      <div id="mode"></div><span class="grow"></span><span class="htitle" id="htitle"></span><button class="themebtn" id="themebtn" data-a="theme" aria-label="Switch to dark theme"></button>
     </div></header>
     <main><div class="wrap" id="view"></div></main>
     <div class="player" id="player"></div>

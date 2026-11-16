@@ -62,7 +62,7 @@ export function chordKeys(c: PChord): string {
 /** One option in a list of ways. `attrs` carries the data-a action. */
 export function wayButton(s: Suggestion, attrs: string, on: boolean, dim = false): string {
   const bars = Math.max(1, Math.round(s.tension * 5));
-  return `<button class="way${dim ? ' off' : ''}" ${attrs} aria-pressed="${on}">
+  return `<button class="way${dim ? ' off' : ''}" ${attrs} data-flip="w:${s.techniqueId}.${s.variant ?? ''}" aria-pressed="${on}">
     <span class="wn">${s.name}${s.variantLabel ? ` <small>${s.variantLabel}</small>` : ''}</span>
     <span class="wc">${s.chords.map(c => c.symbol).join(' → ')}</span>
     <span class="wt">${s.ext && s.ext.fit !== null ? `<span class="ptag fit" title="How smoothly your extensions carry through this way">ext ${Math.round(s.ext.fit * 100)}%</span>` : ''}${s.colorTags.map(t => `<span class="ptag${t === S.pfeel ? ' on' : ''}">${t}</span>`).join('')}<span class="bright" style="margin:0 0 0 auto" title="Tension">${[0, 1, 2, 3, 4].map(k => `<i class="${k < bars ? 'on' : ''}"></i>`).join('')}</span></span>

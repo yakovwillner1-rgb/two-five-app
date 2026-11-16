@@ -1,11 +1,14 @@
+import './tokens.css';
 import './styles.css';
 import { stopAll } from './audio/player';
 import { connectMIDI, midi, midiHooks } from './midi/input';
 import { S, load } from './state';
 import { KINDS, type KindId } from './theory/symbols';
 import { initActions } from './ui/actions';
+import { applyTheme, getTheme } from './ui/theme';
 import { refreshSound } from './ui/pieces';
 import { drawMidi, noteOff, noteOn, resetPL } from './ui/play';
+import { initMotion } from './ui/motion';
 import { initPopover, showPicker, showPop } from './ui/popover';
 import { TITLES, render } from './ui/render';
 
@@ -13,6 +16,8 @@ midiHooks.noteOn = n => noteOn(n, 'midi');
 midiHooks.noteOff = noteOff;
 midiHooks.changed = () => { drawMidi(); refreshSound(); };
 
+applyTheme(getTheme(), false);
+initMotion();
 initPopover();
 initActions();
 
