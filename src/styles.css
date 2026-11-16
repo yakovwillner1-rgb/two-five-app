@@ -514,3 +514,11 @@ main{flex:1;padding:22px 0 40px}
 .rch{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin-bottom:6px}
 .rch b{font-family:var(--display);font-size:1.05rem}
 .rch em{color:var(--gold);font-style:normal}
+
+.rtext{width:100%;min-height:96px;resize:vertical;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:inherit;font-family:var(--mono);font-size:.92rem;line-height:1.6}
+.rtext:focus{outline:2px solid var(--gold);outline-offset:1px}
+.rwarn{margin:10px 0 0;color:var(--gold)}
+.rerrbox{border-color:var(--c5)}
+.lvcol.added{border-color:color-mix(in srgb,var(--gold) 55%,transparent);background:color-mix(in srgb,var(--gold) 10%,var(--panel2))}
+.lvcol.added .cs2{color:var(--gold)}
+.lvcol.live{box-shadow:inset 0 0 0 2px var(--gold)}

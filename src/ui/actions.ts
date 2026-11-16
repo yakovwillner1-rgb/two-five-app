@@ -18,7 +18,7 @@ import { drawLead, leadAction, leadTyped } from './views/lead';
 import { listenAction } from './views/listen';
 import { extPickerHTML, viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
-import { editSheetHTML, loadBytes, reharmAction, reharmTyped } from './views/reharm';
+import { editSheetHTML, loadFile, reharmAction, reharmTyped } from './views/reharm';
 
 /* Tabs where swiping / arrow keys change the key. */
 const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes', 'ext', 'lead'];
@@ -146,7 +146,7 @@ export function initActions(): void {
     const t = e.target as HTMLSelectElement;
     if (t.classList.contains('rfile')) {
       const file = (t as unknown as HTMLInputElement).files?.[0];
-      if (file) file.arrayBuffer().then(buf => { loadBytes(new Uint8Array(buf), file.name); stopAll(); render(); });
+      if (file) file.arrayBuffer().then(buf => loadFile(new Uint8Array(buf), file.name)).then(() => { stopAll(); render(); });
       return;
     }
     if (t.classList.contains('psym')) {
