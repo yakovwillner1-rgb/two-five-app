@@ -97,14 +97,14 @@ export function scaleChoices(c: PChord, next: PChord | null, key: Key): ScaleCho
       mk('halfWhole', '♭9 and ♯9 with a natural 13: the diminished-scale dominant.'),
     ];
     return [
-      mk('lydianDominant', next && step === 11 ? 'It resolves down a half step (a tritone sub): the ♯11 is the root of the dominant it replaces.' : 'It does not resolve down a fifth, so the ♯11 replaces the avoid-note 11 and nothing needs to resolve.'),
+      mk('lydianDominant', next && step === 11 ? 'It resolves down a half step (a tritone sub): the ♯11 is the root of the dominant it replaces.' : 'It does not resolve down a fifth, so Lydian dominant is one color option; compare it with the melody and actual voice leading.'),
       mk('mixolydian', 'The plain dominant scale.'),
     ];
   }
   if (fam === 'maj') {
     const home = deg === 0 && key.mode === 'major' || deg === 3 && key.mode === 'minor';
-    const io = mk('ionian', home ? 'It is the home chord of the key.' : 'The plain major scale on this root.');
-    const ly = mk('lydian', home ? 'The ♯11 removes the avoid-note 4th: a modern color for a home chord.' : 'A major chord that is not home (like the IV): the ♯11 keeps the notes of the key and has no avoid note.');
+    const io = mk('ionian', home ? 'Ionian is a starting palette for this major chord.' : 'The plain major scale on this root.');
+    const ly = mk('lydian', home ? 'The ♯11 removes the avoid-note 4th: a modern color for a home chord.' : 'Lydian is a major-chord color option. It is diatonic on IV in a major key; other roots may introduce notes outside the home key.');
     return home ? [io, ly] : [ly, io];
   }
   if (fam === 'aug') return [mk('lydianAug', 'A major 7 chord with a raised 5th.')];
