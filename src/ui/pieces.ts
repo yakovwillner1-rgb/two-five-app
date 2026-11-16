@@ -57,7 +57,7 @@ export function compactPanel(c: Chord, key: string): string {
   }
   const pick = defaultVoicingIndex(c), v = buildVoicing(c, VDEF[pick]);
   VOICES = [v];
-  const why = pick === 7 ? 'Jazz pianists play dominants this way. It moves smoothly from a Rootless A on the ii.' : pick === 6 ? 'The standard jazz piano voicing. A bass player or your left hand covers the root.' : 'Stacked minor 3rds, the plain shape for this chord.';
+  const why = pick === 7 ? 'Jazz pianists often play 7 chords this way. It follows smoothly from the shape used on the ii chord.' : pick === 6 ? 'A standard jazz piano shape. It has no root note: a bass player, or your left hand, plays that.' : 'Notes stacked in thirds: the plain shape for this chord.';
   return `<div class="vh"><span class="vs">${c.symbol}</span><span class="small">${v.name} · ${v.sub}</span></div>
    <button class="vc one" data-a="voice" data-v="0" aria-label="Play ${v.name}">${kbAbs(voicingItems(v), 12)}<span class="vt">${v.notes.map(x => fmt(x.note) + ' (' + x.label + ')').join('  ')}</span></button>
    <p class="small" style="margin:8px 0 10px">${why}</p>

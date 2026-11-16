@@ -41,7 +41,7 @@ function viewEar(): string {
     <div class="controls"><button class="pill go" data-a="eplay">▶ Play</button><button class="pill" data-a="ecomp">▶ Major, then this</button></div>
     <div class="choices">${ch}</div>${res}
     <p class="small" style="font-family:var(--mono);margin-top:18px">${S.escore.r} of ${S.escore.t} right</p>
-    <p class="small">Each mode plays up and down over a low drone on its root. Listen for the one note that sets it apart. Start with the Major family.</p></div>`;
+    <p class="small">Each mode plays up and down over one low held note. Listen for the one note that makes it sound different. Start with the Major family.</p></div>`;
 }
 export function viewQuiz(): string {
   const seg = `<div class="controls" style="margin-bottom:10px"><div class="seg" role="group" aria-label="Drill type">${([['spell', '2‑5 spelling'], ['ear', 'Modes by ear']] as const).map(([k, l]) => `<button data-a="dmode" data-v="${k}" aria-pressed="${S.dmode === k}">${l}</button>`).join('')}</div></div>`;

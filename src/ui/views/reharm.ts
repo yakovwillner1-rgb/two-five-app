@@ -286,13 +286,13 @@ function voicingsHTML(m: ReharmModel): string {
     return `${i > 0 ? `<div class="lvarr">→<small>${mo ? mo.total : ''}</small></div>` : ''}<button class="lvcol${c.added ? ' added' : ''}" data-a="rhear" data-i="${i}" data-ev="rc${i}" aria-label="Hear ${c.chord.symbol}, ${c.voicing}"><span class="cs2">${c.chord.symbol}</span><span class="small">${c.voicing} · bar ${c.bar + 1}</span>${rows}</button>`;
   }).join('');
   const avg = voices ? (total / voices).toFixed(1) : '0';
-  return `<div class="panel"><h3>Voicings and voice leading</h3>
-    <p class="small" style="margin:0 0 10px">One column per chord, top note first${m.melody.length ? ' (gold = the melody note)' : ' (gold = the top note the app chose: the chord tone nearest to the one before)'}. Under every note: how far it moved from the chord before, in semitones. The number on each arrow is the total. Each voicing is the smoothest one from the chord before it${m.melody.length ? ', under the melody' : ''}. A low root added for the bass is marked "bass" and not counted.</p>
+  return `<div class="panel"><h3>Voicings, and how the notes move</h3>
+    <p class="small" style="margin:0 0 10px">One column per chord, top note first${m.melody.length ? ' (gold = the melody note)' : ' (gold = the top note the app chose: the chord tone nearest to the one before)'}. Under every note you see how far it moved from the chord before, in half steps. The number on each arrow is the total. Each voicing is the smoothest one from the chord before it${m.melody.length ? ', under the melody' : ''}. A low root added for the bass is marked "bass" and not counted.</p>
     <div class="lvline scrollx">${cols}</div>
     <p class="small" style="margin:10px 0 0">In all: <b>${avg}</b> semitones per voice on average, <b>${common}</b> note${common === 1 ? '' : 's'} held over from one chord to the next. Tap a column to hear it. For every other voicing of one chord, use the Melody tab.</p></div>`;
 }
 function changesHTML(re: Reharm): string {
-  const labels = (n: number) => (n === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls']);
+  const labels = (n: number) => (n === 4 ? ['What it is', 'How the notes move', 'Notes from outside the key', 'Why it pulls'] : ['What it is', 'Notes from outside the key', 'Why it pulls']);
   return `<div class="rchanges">${re.changes.map(c => {
     const main = c.lines.filter(l => !l.startsWith('Melody: ')), mel = c.lines.filter(l => l.startsWith('Melody: ')), lab = labels(main.length);
     return `<div class="rchange"><div class="rch"><span class="tag">Bar ${c.bar + 1}</span><b>${c.from.symbol} → <em>${c.way.chords.map(x => x.symbol).join(' → ')}</em> → ${c.to.symbol}</b><span class="small">${c.way.name}${c.way.variantLabel ? ' · ' + c.way.variantLabel : ''}</span></div>
@@ -315,7 +315,7 @@ function emptyHTML(): string {
      <div class="controls" style="justify-content:flex-start">${PICK}<button class="pill" data-a="rdemo">Try the example tune</button></div>
      <p class="small" style="margin:12px 0 0">The file stays on this device: nothing is uploaded. A PDF or a photo of sheet music cannot be read; export MusicXML or type the chords.</p></div>
    <div class="panel"><h3>Or type the chords of a lead sheet</h3>${textBox()}</div>
-   <div class="panel"><h3>What you get</h3><ol class="rsteps"><li>The key and the chord chart, which you can correct chord by chord.</li><li>A voicing for every chord, each one the smoothest from the chord before, with every voice's movement shown.</li><li>Three reharms (light, medium, wild) in the genre and feel you pick, with the reason for every change. Under a melody, only chords the melody fits are used.</li><li>Play it, download it as a MIDI file for Logic, or practise the voicings in Play it.</li></ol></div>
+   <div class="panel"><h3>What you get</h3><ol class="rsteps"><li>The key and the chord chart, which you can correct chord by chord.</li><li>A voicing for every chord, each one the smoothest from the chord before, with every voice's movement shown.</li><li>Three versions with extra passing chords (light, medium, wild) in the genre and feel you pick, with the reason for every change. Under a melody, only chords the melody fits are used.</li><li>Play it, download it as a MIDI file for Logic, or practise the voicings in Play it.</li></ol></div>
   </div>`;
 }
 

@@ -133,7 +133,7 @@ function targetHTML(): string {
   }
   const c = st.chord;
   const how = S.pstrict ? `Play the <b>${st.voicing.name}</b> voicing, bottom to top: <b>${st.voicing.notes.map(x => fmt(x.note)).join(' · ')}</b>. Any octave counts.`
-    : `Any voicing with the 3rd (<b>${fmt(c.tones[1])}</b>) and the 7th (<b>${fmt(c.tones[3])}</b>). Every other note has to fit ${fmt(c.mode.notes[0])} ${c.mode.name}.`;
+    : `Play any shape that has the 3rd (<b>${fmt(c.tones[1])}</b>) and the 7th (<b>${fmt(c.tones[3])}</b>). Every other note must be in the ${fmt(c.mode.notes[0])} ${c.mode.name} scale.`;
   return `${chips}
     <div class="eyebrow" style="margin-top:14px">${st.label}${S.px === 'random' ? ' · round ' + (P.rounds + 1) : ''}</div>
     <div class="pbig" data-chord="${cref(c)}">${c.symbol}</div><p class="phow">${how}</p>${pstats()}`;

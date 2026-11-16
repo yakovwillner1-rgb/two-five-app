@@ -67,7 +67,7 @@ function checkHTML(m: Model): string {
   return `<div class="lcheck ${cls}"><span class="ltag">${tag}</span><span>${c.text}</span></div>${fixes}`;
 }
 function keptHTML(): string {
-  if (!S.lkept.length) return '<div class="panel"><h3>Voice-leading line</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
+  if (!S.lkept.length) return '<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
   const cols = S.lkept.map((k, i) => {
     const prev = i > 0 ? S.lkept[i - 1] : null, mo = prev ? voiceMotion(prev.notes.map(n => n.m), k.notes.map(n => n.m)) : null;
     const rows = [...k.notes].reverse().map((n, j) => {
@@ -76,7 +76,7 @@ function keptHTML(): string {
     }).join('');
     return `${i > 0 ? `<div class="lvarr">→<small>${mo!.total}</small></div>` : ''}<button class="lvcol" data-a="lkhear" data-i="${i}" aria-label="Hear ${k.sym}, ${k.name}"><span class="cs2">${k.sym}</span><span class="small">${k.name}</span>${rows}</button>`;
   }).join('');
-  return `<div class="panel"><h3>Voice-leading line</h3><p class="small" style="margin:0 0 10px">Each column is a kept voicing, top note first. Under every note: how far it moved from the voicing before (in semitones). The number on each arrow is the total movement. Tap a column to hear it.</p>
+  return `<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0 0 10px">Each column is a voicing you kept, top note first. Under every note you see how far it moved from the voicing before (in half steps). The number on each arrow is the total. Tap a column to hear it.</p>
     <div class="lvline scrollx">${cols}</div>
     <div class="controls" style="margin-top:12px"><button class="pill sm go" data-a="lplay">Practice these in Play it</button><button class="pill sm" data-a="lkall">▶ Hear the line</button><button class="pill sm" data-a="lundo">Remove last</button><button class="pill sm" data-a="lkclear">Clear</button></div></div>`;
 }
@@ -178,7 +178,7 @@ export function viewLead(): string {
      <span class="lab">Goes to</span><div>${tilesHTML(H, S.lnx ?? -1, 'lnext', 'r5', true)}
        <p class="small" style="margin:8px 0 0">${nextNote(m)}${S.lnx != null ? ' <button class="linkbtn" data-a="lnextx">Clear</button>' : ''}</p></div>
      <span class="lab">Genre</span><div><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div>
-       <p class="small" style="margin:8px 0 0">The genre's favorite voicing types are listed first. Once you keep a voicing, the smoothest voice leading comes first instead.</p></div>
+       <p class="small" style="margin:8px 0 0">The genre's favorite voicing types are listed first. Once you keep a voicing, the smoothest choice comes first instead.</p></div>
    </div>
    <div class="midibar" id="midibar"></div>
    <div class="pkwrap" id="pkwrap"></div>

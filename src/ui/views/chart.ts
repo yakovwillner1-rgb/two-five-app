@@ -16,7 +16,7 @@ export function viewChart(): string {
   }).join('');
   return `<div class="stack"><div style="text-align:center"><div class="eyebrow">Reference charts</div><h2>${fmt(root)} <em>${T.label.toLowerCase()}</em></h2></div>
     <div class="controls"><div class="seg" role="group" aria-label="Chart">${SCALE_TYPES.map(k => `<button data-a="chart" data-v="${k}" aria-pressed="${S.chart === k}">${TYPES[k].label}</button>`).join('')}</div></div>
-    <p class="small" style="text-align:center;max-width:66ch;margin:0 auto">How to use these for passing chords: find the chord you want to land on, open the chart for that chord's key, and play rows 2 and 5 before it. Major and dominant targets use the Major chart. Minor targets use Harmonic Minor for a dark sound or Melodic Minor for a smoother one. Tap a row to hear it.</p>
+    <p class="small" style="text-align:center;max-width:66ch;margin:0 auto">How to use these: find the chord you want to land on, open the chart for that chord's key, and play rows 2 and 5 before it. Major and dominant (7) chords use the Major chart. Minor chords use Harmonic Minor for a dark sound, or Melodic Minor for a smoother one. Tap a row to hear it.</p>
     <div class="scrollx"><div class="chart"><div class="row head"><span>Degree</span><span>Chord</span><span>Mode</span><span>Scale notes</span></div>${rows}</div></div>
     <p class="hint">The key follows the home key above. Swipe sideways to change it.</p></div>`;
 }

@@ -88,5 +88,12 @@ stays in time when the tempo changes. Events come from `playSeq` in `src/audio/p
 - **Folds** (`details.fold`): why it works, guide tones, scales, chord details; closed by default.
 - **Layout:** header, scrolling `<main>`, transport are separate regions; wrap and grow text, never shrink labels to fit.
 
+## Guitar parts
+- **Chord box** (`chordBox`): standard vertical box, low E on the left; × = don't play, ○ = open string, number on the left = starting fret.
+  Dots: root gold, 3rd/7th mint, others periwinkle (same meaning as the piano legend).
+- **Neck** (`neckStage`): lies down like you hold it (high E on top); one dot per string slides along its string to the next chord
+  (`--vl` timing, spring). Root gold, 3rd violet, 7th ink, others periwinkle.
+- The header Piano/Guitar switch is a `.seg`; on phones the header is two rows plus the key row.
+
 ## Not built yet (later steps)
 Level-up moment and XP (Step 5, game layer), personal bests, daily challenge.

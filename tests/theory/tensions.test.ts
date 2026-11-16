@@ -106,15 +106,15 @@ describe('extensions that lead into the next chord', () => {
     expect(extensionOptions(ch('C/G'), ch('G7'), C)).toEqual([]);
   });
   it('sourced resolutions: ♭9 falls to the 5th; the 9 of ii is the 13 of V; the 13 of V is the 3rd of I', () => {
-    expect(move('G7b9', 'Cmaj7')).toEqual(['A♭ (♭9) falls a half step to G, the 5th of Cmaj7']);
-    expect(move('E7b9', 'Am7')).toEqual(['F (♭9) falls a half step to E, the 5th of Am7']);
-    expect(move('Dm9', 'G7')).toEqual(['E (9) stays: it is the 13th of G7']);
-    expect(move('G13', 'Cmaj7')).toEqual(['A (9) stays: it is the 13th of Cmaj7', 'E (13) stays: it is the 3rd of Cmaj7']);
+    expect(move('G7b9', 'Cmaj7')).toEqual(['A♭ (♭9) moves down a half step to G, the 5th of Cmaj7']);
+    expect(move('E7b9', 'Am7')).toEqual(['F (♭9) moves down a half step to E, the 5th of Am7']);
+    expect(move('Dm9', 'G7')).toEqual(['E (9) stays the same: it is the 13th of G7']);
+    expect(move('G13', 'Cmaj7')).toEqual(['A (9) stays the same: it is the 13th of Cmaj7', 'E (13) stays the same: it is the 3rd of Cmaj7']);
   });
   it('other tensions: the nearest note of the next chord', () => {
-    expect(move('G7#9b13', 'Cmaj7')).toEqual(['A♯ (♯9) rises a half step to B, the 7th of Cmaj7', 'E♭ (♭13) rises a half step to E, the 3rd of Cmaj7']);
-    expect(move('Db9#11', 'Cmaj7')).toEqual(['E♭ (9) rises a half step to E, the 3rd of Cmaj7', 'G (♯11) stays: it is the 5th of Cmaj7']);
-    expect(move('E7b9b13', 'Am7')).toEqual(['F (♭9) falls a half step to E, the 5th of Am7', 'C (♭13) stays: it is the 3rd of Am7']);
+    expect(move('G7#9b13', 'Cmaj7')).toEqual(['A♯ (♯9) moves up a half step to B, the 7th of Cmaj7', 'E♭ (♭13) moves up a half step to E, the 3rd of Cmaj7']);
+    expect(move('Db9#11', 'Cmaj7')).toEqual(['E♭ (9) moves up a half step to E, the 3rd of Cmaj7', 'G (♯11) stays the same: it is the 5th of Cmaj7']);
+    expect(move('E7b9b13', 'Am7')).toEqual(['F (♭9) moves down a half step to E, the 5th of Am7', 'C (♭13) stays the same: it is the 3rd of Am7']);
   });
   it('every tension of every option gets a move, in all 12 keys', () => {
     for (let pc = 0; pc < 12; pc++) {

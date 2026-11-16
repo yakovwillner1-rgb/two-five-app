@@ -171,13 +171,13 @@ export function viewListen(): string {
    <div style="text-align:center"><div class="eyebrow">Listen · ${curTitle()}</div><h2>Play a chord, see where it <em>goes</em></h2></div>
    <div class="midibar" id="midibar"></div>
    <div class="panel pctl">
-     <div class="pcrow"><span class="lbl">Hold for</span><div class="seg" role="group" aria-label="How long to hold a chord before it counts">${HOLDS.map(h => `<button data-a="lhold" data-v="${h}" aria-pressed="${S.lhold === h}">${h / 1000} s</button>`).join('')}</div><span class="small">A chord counts once its notes have not changed for this long.</span></div>
+     <div class="pcrow"><span class="lbl">Hold for</span><div class="seg" role="group" aria-label="How long to hold a chord before it counts">${HOLDS.map(h => `<button data-a="lhold" data-v="${h}" aria-pressed="${S.lhold === h}">${h / 1000} s</button>`).join('')}</div><span class="small">The app names the chord after you hold the same notes this long.</span></div>
      <div class="pcrow sws">${sw('llatch', S.llatch, 'Latch keys (tap to hold)')}${S.llatch ? '<button class="pill sm" data-a="lrelease">Release all</button>' : ''}${S.soundOut ? '' : sw('psound', S.psound, 'Sound for MIDI notes')}</div>
    </div>
    <div class="pkwrap" id="pkwrap"></div>
    <div class="panel ptarget lnow" id="lnow">${nowHTML()}</div>
    <div class="stack" id="lnext">${nextHTML()}</div>
    <div id="llog">${logHTML()}</div>
-   <p class="hint">Reads the notes you hold (MIDI or the keys above), not sound from a microphone. The lowest note decides between chords that share the same notes.</p>
+   <p class="hint">It reads the keys you press (MIDI or the on-screen keys), not sound from a microphone. When two chords have the same notes, the lowest note decides which one it is.</p>
   </div>`;
 }

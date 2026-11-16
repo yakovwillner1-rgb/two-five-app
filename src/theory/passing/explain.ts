@@ -29,8 +29,8 @@ export function voiceMoves(last: PChord, to: PChord): VoiceMove[] {
 
 const size = (s: number): string => (Math.abs(s) === 1 ? 'a half step' : 'a whole step');
 export function moveText(m: VoiceMove): string {
-  if (m.semis === 0) return `${fmt(m.from)} stays as a common tone`;
-  return `${fmt(m.from)} in ${m.fromChord} ${m.semis < 0 ? 'falls' : 'rises'} ${size(m.semis)} to ${fmt(m.to)} in ${m.toChord}`;
+  if (m.semis === 0) return `${fmt(m.from)} stays the same, because both chords have it`;
+  return `${fmt(m.from)} in ${m.fromChord} moves ${m.semis < 0 ? 'down' : 'up'} ${size(m.semis)} to ${fmt(m.to)} in ${m.toChord}`;
 }
 /** Bullet 2: the two most telling moves. */
 export function voiceLeadingText(moves: VoiceMove[]): string {
@@ -44,5 +44,5 @@ export function voiceLeadingText(moves: VoiceMove[]): string {
 export function borrowedText(outside: Note[], homeTitle: string, source?: string): string {
   if (!outside.length) return `Every note is inside ${homeTitle}.`;
   const list = outside.map(fmt).join(', ');
-  return `${list} ${outside.length === 1 ? 'is' : 'are'} outside ${homeTitle}${source ? `, borrowed from ${source}` : ''}.`;
+  return `${list} ${outside.length === 1 ? 'is' : 'are'} not in ${homeTitle}${source ? ` (borrowed from ${source})` : ''}.`;
 }

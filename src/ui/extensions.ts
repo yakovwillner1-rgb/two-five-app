@@ -15,7 +15,7 @@ export function scaleChips(s: ChordScale): string {
 export function tensionLine(s: ChordScale): string {
   const list = (xs: { label: string; note: Note }[]) => xs.map(x => `${x.label} (${fmt(x.note)})`).join(', ');
   const t = tensionsOf(s), a = avoidOf(s), cau = s.notes.find(n => n.caution);
-  return `<div class="small"><b>Available:</b> ${t.length ? list(t) : 'none'} · <b>Avoid in the chord:</b> ${a.length ? list(a) : 'none'}</div>${cau ? `<div class="small extcau">The ${cau.label} (${fmt(cau.note)}): ${cau.caution}</div>` : ''}`;
+  return `<div class="small"><b>Extra notes that fit:</b> ${t.length ? list(t) : 'none'} · <b>Notes to avoid holding:</b> ${a.length ? list(a) : 'none'}</div>${cau ? `<div class="small extcau">The ${cau.label} (${fmt(cau.note)}): ${cau.caution}</div>` : ''}`;
 }
 /** Register a chord sequence to play and return its id (for data-a="seq"). */
 export function seqId(id: string, chords: PChord[]): string {

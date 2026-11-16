@@ -116,7 +116,7 @@ export function viewMove(): string {
   ].join('');
   cache.chords.mf = { tones: playTones(m.from) };
   /* each chord of the path: its scale, its tensions, and extended versions that lead into the next chord */
-  const ext = `<div class="panel"><h3>Scales and other extensions</h3><p class="small" style="margin:0 0 10px">Each chord's scale decides which extensions fit. Tap an extended chord to hear it go into the next chord. The lines under it say where each added note moves.</p>
+  const ext = `<div class="panel"><h3>Scales and other extensions</h3><p class="small" style="margin:0 0 10px">Each chord has a scale, and the scale decides which extra notes fit. Tap a chord with extra notes to hear it go into the next chord. The lines under it say where each added note goes.</p>
     <div class="extrows">${seq.map((c, i) => {
       const next = i < seq.length - 1 ? seq[i + 1] : null, ch = scaleChoices(c, next, key)[0], opts = extensionOptions(c, next, key);
       return `<div class="extrow ${cls[i]}"><div class="exth"><span class="cs2">${c.symbol}</span>${next ? `<span class="arr">→</span><span class="small">${next.symbol}</span>` : '<span class="small">landing chord</span>'}<span class="cn">${ch.scale.name}</span></div>
@@ -125,14 +125,14 @@ export function viewMove(): string {
     }).join('')}</div>
     <p class="small" style="margin:10px 0 0">Rules and sources: see <button class="linkbtn" data-a="tab" data-v="ext">Extensions</button> under Reference.</p></div>`;
   /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
-  const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
+  const labels = s && s.explanation.length === 4 ? ['What it is', 'How the notes move', 'Notes from outside the key', 'Why it pulls'] : ['What it is', 'Notes from outside the key', 'Why it pulls'];
   const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('')
     + (s.ext?.lines.length ? `<p><span class="whyl">Extensions</span>${s.ext.lines.join('<br>')}</p>` : '') : '';
   const extOn = !!s?.ext;
   /* choose: a tray under the path with the chords of the key as big tiles; typing and extensions are one step further */
   const side = S.pickSide, tray = side ? `<div class="tray" data-flip="tray"><div class="trayh"><span class="lbl">${side === 'from' ? 'Start on' : 'Land on'}</span><button class="vx" data-a="pickside" data-v="${side}" aria-label="Close">×</button></div>
     ${side === 'from' ? tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true) : tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1', true)}
-    <details class="more"${(side === 'from' ? S.fromSym || S.fromExt : S.toSym || S.toExt) ? ' open' : ''}><summary>Type a chord or add an extension</summary>${side === 'from' ? input('from', S.fromSym, m.badFrom) + extRow('from', m.fromChoices, m.from) : input('to', S.toSym, m.badTo) + extRow('to', m.toChoices, m.to)}${extOn ? '<p class="small">The passing chords took extensions that connect to yours; routes are re-ranked by how smoothly your added notes carry through (the “connection” tag).</p>' : ''}</details></div>` : '';
+    <details class="more"${(side === 'from' ? S.fromSym || S.fromExt : S.toSym || S.toExt) ? ' open' : ''}><summary>Type a chord or add an extension</summary>${side === 'from' ? input('from', S.fromSym, m.badFrom) + extRow('from', m.fromChoices, m.from) : input('to', S.toSym, m.badTo) + extRow('to', m.toChoices, m.to)}${extOn ? '<p class="small">The passing chords changed their extra notes to fit yours. Routes are re-ordered by how smoothly your added notes carry through (the “connection” tag).</p>' : ''}</details></div>` : '';
   const startPill = !showFrom ? `<button class="pill sm startpill" data-a="pickside" data-v="from">Start: ${m.from.symbol} · change ▾</button>` : '';
   /* understand: one cue from the notes actually played */
   const cueHTML = cue ? `<div class="cue" data-flip="cue"><span class="lbl">Listen for this</span><p>${cue.text}</p><button class="pill sm" data-a="study-focus">▶ Hear just this line</button></div>` : '';
@@ -162,7 +162,7 @@ export function viewMove(): string {
    <section class="applybar"><button class="pill" data-a="study-save">${A ? 'Replace A with this' : 'Save as A to compare'}</button><button class="pill go" data-a="study-practice">Practice this →</button></section>
    ${compare}
    ${s ? fold(`Why it works · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}`, `<div class="why"><p class="small">What the technique does in general. The notes actually played are in the keyboard above.</p>${why}</div>`) : ''}
-   ${s ? fold('Guide tones by name (reference)', `<p class="small" style="margin:0">The 3rds and 7ths of each chord as note names, nearest-note view. Hum these and you hear the whole move. They are not octave-exact; the keyboard above shows what is played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
+   ${s ? fold('The 3rds and 7ths by name (reference)', `<p class="small" style="margin:0">The 3rd and 7th of each chord, by note name. Hum them one after the other and you hear the whole move. This is a simple guide: the keyboard above shows the exact notes played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
    ${fold('Scales and extensions', ext)}
    ${fold('Chord details and example voicings (reference)', `<div class="cards">${cards}</div>`)}
   </div>`;

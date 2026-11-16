@@ -21,14 +21,14 @@ export function viewModes(): string {
      <div class="eyebrow">Mode ${S.mdeg + 1} of ${m.parent}</div>
      <h2>${fmt(m.notes[0])} <em>${m.name}</em></h2>
      <p class="msound">${m.sound}</p>
-     <div class="lbl">Formula, compared with major</div><div class="notes">${m.formula.map((f, j) => `<span class="n ${cls(j)}">${f}</span>`).join('')}</div>
+     <div class="lbl">Steps of the scale (compared with major)</div><div class="notes">${m.formula.map((f, j) => `<span class="n ${cls(j)}">${f}</span>`).join('')}</div>
      <div class="lbl" style="margin-top:12px">Notes</div><div class="notes">${m.notes.map((n, j) => `<span class="n ${cls(j)}" data-ev="s${j}">${fmt(n)}</span>`).join('')}</div>
      <div style="margin:16px 0 8px">${kbAbs(kitems, 24, true)}</div>
-     <div class="vleg"><span><i class="lg" style="background:var(--gold)"></i>Root</span><span><i class="lg" style="background:var(--c5)"></i>Character note (${m.formula[m.char]})</span><span><i class="lg" style="background:var(--c2)"></i>Other notes</span></div>
+     <div class="vleg"><span><i class="lg" style="background:var(--gold)"></i>Root</span><span><i class="lg" style="background:var(--c5)"></i>The note that gives it its sound (${m.formula[m.char]})</span><span><i class="lg" style="background:var(--c2)"></i>Other notes</span></div>
      <div class="mchord"><span class="lbl" style="margin:0">Its chord</span><span class="cs" data-chord="${k}">${m.chord.symbol}</span><span class="small">Use it over: ${m.use}</span></div>
      <div class="controls" style="justify-content:flex-start"><button class="pill" data-a="mchordplay">▶ Chord, then scale</button><button class="pill" data-a="mcomp">▶ Major, then this</button><button class="pill" data-a="vopen" data-k="${k}">Voicings</button></div>
     </div></div>
    <div class="panel"><h3>Two ways to look at modes</h3>
-    <p class="small" style="max-width:72ch"><b>From one scale:</b> play C major starting on D and you get D Dorian. That's how the charts work, and it tells you which mode fits each chord in a key. <b>Same root:</b> C Ionian, C Dorian, C Phrygian and so on, all from the same note. Hearing them over one drone is the fastest way to learn how each one sounds. Learn a mode by its formula and its character note; the rest comes from the parent scale.</p></div>
+    <p class="small" style="max-width:72ch"><b>From one scale:</b> play C major starting on D and you get D Dorian. That is how the charts work, and it tells you which mode fits each chord in a key. <b>Same root:</b> C Ionian, C Dorian, C Phrygian and so on, all starting on the same note. Hearing them over one held note is the fastest way to learn how each one sounds. To learn a mode, remember its steps and the one note that makes it different.</p></div>
    <p class="hint">The root follows the key strip. Swipe sideways to change it.</p></div>`;
 }
