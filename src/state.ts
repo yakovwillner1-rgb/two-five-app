@@ -1,4 +1,5 @@
 import type { Study } from './study/model';
+import type { Grip } from './theory/guitar';
 import type { Genre } from './data/styles';
 import type { Feel } from './data/techniques';
 import { HOME, homeChords, homeKey, homeTitle } from './theory/home';
@@ -13,7 +14,7 @@ export type Tab = 'move' | 'prog' | 'lead' | 'reharm' | 'listen' | 'play' | 'qui
  */
 export interface ProgChord { d: number; sym?: string; /** picked extension: the chord type that replaces the plain one (e.g. 'maj9') */ ext?: KindId; via: string | null }
 /** A voicing kept on the Melody tab: chord symbol, voicing name, and its notes low to high (m = MIDI, n = note name, lab = degree, h = hand). */
-export interface KeptVoicing { sym: string; name: string; notes: { m: number; n: string; lab: string; h: 'L' | 'R' }[] }
+export interface KeptVoicing { sym: string; name: string; notes: { m: number; n: string; lab: string; h: 'L' | 'R' }[]; /** which instrument it was kept for (missing = piano) */ inst?: 'piano' | 'guitar'; /** guitar: the grip itself (frets and fingers) */ grip?: Grip }
 export interface State {
   /** last tab used in each navigation group */
   /** which instrument the app shows voicings for */
@@ -87,3 +88,11 @@ export function setMode(m: HomeMode): void {
   S.ld = 0; S.lext = null; S.lnx = null;
   S.quiz = null;
 }
+
+/* The voicings kept on the Melody tab, one list per instrument (switching instrument never mixes them up). */
+const instOf = (k: KeptVoicing): 'piano' | 'guitar' => k.inst ?? 'piano';
+export const keptList = (): KeptVoicing[] => S.lkept.filter(k => instOf(k) === S.inst);
+export function keptPush(k: KeptVoicing): void { S.lkept.push({ ...k, inst: S.inst }); }
+export function keptPop(): void { for (let i = S.lkept.length - 1; i >= 0; i--) if (instOf(S.lkept[i]) === S.inst) { S.lkept.splice(i, 1); return; } }
+export function keptClear(): void { S.lkept = S.lkept.filter(k => instOf(k) !== S.inst); }
+export function keptSet(list: KeptVoicing[]): void { S.lkept = [...S.lkept.filter(k => instOf(k) !== S.inst), ...list.map(k => ({ ...k, inst: S.inst }))]; }

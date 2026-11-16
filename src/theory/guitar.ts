@@ -12,11 +12,11 @@ export const STRING_NAMES = ['E', 'A', 'D', 'G', 'B', 'E'] as const;
 /** Highest fret we use. */
 export const MAX_FRET = 15;
 
-export type GripType = 'open' | 'barre' | 'shell' | 'triad' | 'drop2' | 'drop3' | 'rootless' | 'quartal';
+export type GripType = 'open' | 'barre' | 'shell' | 'triad' | 'drop2' | 'drop3' | 'rootless' | 'quartal' | 'slash';
 export type GuitarStyle = 'jazz' | 'pop';
 
 /** What a grip needs to know about a chord: its tones (root first) and a degree label for each ("R", "3", "♭7" ...). */
-export interface GChord { symbol: string; tones: Note[]; labels: string[] }
+export interface GChord { symbol: string; tones: Note[]; labels: string[]; /** slash chord: the note that must be the lowest */ bass?: Note }
 
 export interface GuitarNote { string: number; fret: number; midi: number; note: Note; label: string; role: VoiceRole }
 export interface Barre { fret: number; from: number; to: number }
@@ -59,12 +59,19 @@ const THIRDS = ['3', '♭3', '4'], FIFTHS = ['5', '♭5', '♯5'], SEVENTHS = ['
 
 interface Deg { pc: number; semis: number; note: Note; label: string }
 interface Parts { root: Deg; third?: Deg; fifth?: Deg; seventh?: Deg; ext?: Deg; all: Deg[] }
+/** The extension that defines the chord: an altered one (♭9 ♯9 ♯11 ♭13) beats a plain one; among plain ones the highest (13, then 11, then 9). */
+function pickExt(exts: Deg[]): Deg | undefined {
+  const altered = exts.filter(d => ['♭9', '♯9', '♯11', '♭13'].includes(d.label));
+  if (altered.length) return altered[altered.length - 1];
+  for (const l of ['13', '11', '9']) { const d = exts.find(x => x.label === l); if (d) return d; }
+  return undefined;
+}
 function parts(c: GChord): Parts {
   const r = pcOf(c.tones[0]);
   const all: Deg[] = c.tones.map((n, i) => ({ pc: pcOf(n), semis: mod(pcOf(n) - r, 12), note: n, label: c.labels[i] ?? 'R' }));
   const pick = (L: string[]) => all.find((d, i) => i > 0 && L.includes(d.label));
   const exts = all.filter((d, i) => i > 0 && EXTS.includes(d.label));
-  return { root: all[0], third: pick(THIRDS), fifth: pick(FIFTHS), seventh: pick(SEVENTHS), ext: exts.length ? exts[exts.length - 1] : undefined, all };
+  return { root: all[0], third: pick(THIRDS), fifth: pick(FIFTHS), seventh: pick(SEVENTHS), ext: pickExt(exts), all };
 }
 /** Spell a degree of the chord (9, 13 ...) on the right letter. */
 function degreeNote(c: GChord, label: string, semis: number): Note {
@@ -72,16 +79,18 @@ function degreeNote(c: GChord, label: string, semis: number): Note {
   return spell((letterIndex(root) + (STEP[label] ?? 0)) % 7, mod(pcOf(root) + semis, 12));
 }
 const roleOf = (label: string): VoiceRole => (label === 'R' ? 'root' : THIRDS.includes(label) || ['7', '♭7', '𝄫7'].includes(label) ? 'guide' : 'color');
+/** The version of a degree the chord actually names (♭13 and 13 are different notes: never swap one for the other). */
+function explicit(p: Parts, family: string[]): Deg | undefined { return p.all.find((d, i) => i > 0 && family.includes(d.label)); }
 
 /**
  * The notes a full grip plays (rule 38). Always the root, the third (or 4th on a sus chord) and the seventh (or 6th).
  * The 4th note is the 5th, except when the chord has an extension (9, 11, 13 ...): then the extension is played and the 5th is dropped.
- * A chord with no seventh (a plain triad) uses root, third, fifth.
+ * A chord with no seventh (a plain triad) uses root, third, fifth; an added note (add9) is part of the chord, so it is played too.
  */
 export function core(c: GChord): Deg[] {
   const p = parts(c);
   if (!p.third) return [];
-  if (!p.seventh) return p.fifth ? [p.root, p.third, p.fifth] : [];
+  if (!p.seventh) { const d = p.fifth ? [p.root, p.third, p.fifth] : [p.root, p.third]; if (p.ext) d.push(p.ext); return d.length >= 3 ? d : []; }
   const fourth = p.ext ?? p.fifth;
   const d = [p.root, p.third, p.seventh];
   if (fourth) d.push(fourth);
@@ -116,24 +125,51 @@ function place(c: GChord, r: Recipe, style: GuitarStyle): Grip[] {
 }
 
 /**
- * Which finger plays what (rule 45). One finger per fret from the lowest fret (in an open chord, from fret 1), so fret f gets finger
- * f − base + 1. Several notes on the same fret get neighbouring fingers, except on the lowest fret of a moved-up shape, where one
- * index finger lies flat across them as a barre. This is a sensible default, not the only way: hands differ.
+ * Which finger plays what (rule 45). A fingering is only returned when a hand can really play it:
+ * - four fingers, index = 1 … little = 4, and a finger never jumps back: a higher finger is never on a lower fret;
+ * - one finger plays one note, except an index-finger barre (all its notes on the same fret, and no open string under the barre);
+ * - fingers next to each other reach at most one fret further than their number gap (index to ring: 3 frets; index to little: 4).
+ * Among valid fingerings the most natural wins: one finger per fret from the lowest fret (in an open chord, from fret 1), fewer stretches.
+ * Returns null when there is none (the grip is then not offered). Fingerings are a sensible default; hands differ.
  */
-export function assignFingers(frets: (number | null)[]): { fingers: (number | null)[]; barre: Barre | null } {
-  const notes = frets.map((f, s) => ({ s, f })).filter((x): x is { s: number; f: number } => x.f != null && x.f > 0);
+export function assignFingers(frets: (number | null)[]): { fingers: (number | null)[]; barre: Barre | null } | null {
+  const notes = frets.map((f, s) => ({ s, f })).filter((x): x is { s: number; f: number } => x.f != null && x.f > 0).sort((a, b) => a.f - b.f || a.s - b.s);
   const fingers: (number | null)[] = frets.map(() => null);
   if (!notes.length) return { fingers, barre: null };
-  const lo = Math.min(...notes.map(n => n.f)), base = frets.some(f => f === 0) && lo <= 3 ? 1 : lo;
-  let next = 1, barre: Barre | null = null;
-  [...new Set(notes.map(n => n.f))].sort((a, b) => a - b).forEach((f, gi) => {
-    const grp = notes.filter(n => n.f === f).sort((a, b) => a.s - b.s);
-    if (gi === 0 && base === lo && grp.length >= 2) { grp.forEach(n => { fingers[n.s] = 1; }); barre = { fret: f, from: grp[0].s, to: grp[grp.length - 1].s }; next = 2; return; }
-    let fin = Math.max(next, f - base + 1);
-    grp.forEach(n => { fingers[n.s] = Math.min(4, fin); fin++; });
-    next = Math.min(4, fin);
-  });
-  return { fingers, barre };
+  const lo = notes[0].f, base = frets.some(f => f === 0) && lo <= 3 ? 1 : lo;
+  const ideal = (f: number): number => Math.min(4, Math.max(1, f - base + 1));
+  let best: { cost: number; fin: number[] } | null = null;
+  const fin: number[] = [];
+  const barreOk = (): boolean => {
+    const idx = notes.map((n, i) => (fin[i] === 1 ? n.s : -1)).filter(x => x >= 0);
+    if (idx.length < 2) return true;
+    const a = Math.min(...idx), z = Math.max(...idx);
+    return !frets.some((f, s) => f === 0 && s > a && s < z);
+  };
+  const rec = (i: number, cost: number): void => {
+    if (best && cost >= best.cost) return;
+    if (i === notes.length) { if (barreOk()) best = { cost, fin: [...fin] }; return; }
+    const prev = i ? fin[i - 1] : 1;
+    for (let f = prev; f <= 4; f++) {
+      let ok = true, extra = 0;
+      for (let j = 0; j < i && ok; j++) {
+        const a = fin[j], gap = notes[i].f - notes[j].f;
+        if (a === f) { if (f !== 1 || gap !== 0) ok = false; }          // the same finger twice: only an index barre on one fret
+        else if (gap > f - a + 1) ok = false;                            // too far apart for these two fingers
+        else if (gap === f - a + 1) extra += 0.6;                        // a stretch
+      }
+      if (!ok) continue;
+      fin[i] = f;
+      rec(i + 1, cost + Math.abs(f - ideal(notes[i].f)) + extra);
+    }
+    fin.length = i;
+  };
+  rec(0, 0);
+  if (!best) return null;
+  const b = best as { cost: number; fin: number[] };
+  notes.forEach((n, i) => { fingers[n.s] = b.fin[i]; });
+  const bar = notes.filter((_n, i) => b.fin[i] === 1);
+  return { fingers, barre: bar.length >= 2 ? { fret: bar[0].f, from: Math.min(...bar.map(x => x.s)), to: Math.max(...bar.map(x => x.s)) } : null };
 }
 function fretInfo(frets: (number | null)[]): { lo: number; hi: number; span: number; fingers: number } {
   const f = frets.filter((x): x is number => x != null && x > 0);
@@ -148,12 +184,15 @@ function fretInfo(frets: (number | null)[]): { lo: number; hi: number; span: num
 /** Score: lower is better. Plain, tunable numbers (rule 42). */
 const TYPE_COST: Record<GuitarStyle, Record<GripType, number>> = {
   /* rootless and fourths cost more: on its own, a guitar chord should have its root (rule 40) */
-  jazz: { drop2: 0, shell: 0.5, drop3: 0.9, barre: 1.8, open: 1.8, triad: 2.2, quartal: 2.8, rootless: 3.2 },
-  pop: { open: 0, barre: 0.3, triad: 1.2, shell: 2.4, drop2: 2.8, drop3: 3.2, rootless: 3.6, quartal: 3.6 },
+  jazz: { slash: 0.2, drop2: 0, shell: 0.5, drop3: 0.9, barre: 1.8, open: 1.8, triad: 2.2, quartal: 2.8, rootless: 3.2 },
+  pop: { slash: 0.2, open: 0, barre: 0.3, triad: 1.2, shell: 2.4, drop2: 2.8, drop3: 3.2, rootless: 3.6, quartal: 3.6 },
 };
 function makeGrip(c: GChord, r: Recipe, frets: (number | null)[], style: GuitarStyle, sub: string, extraCost = 0): Grip | null {
   const info = fretInfo(frets);
-  if (info.span > 5 || info.fingers > 4) return null;
+  if (info.span > 5) return null;
+  const fg = assignFingers(frets);
+  if (!fg) return null;                                   // no hand can play it
+  const used = new Set(fg.fingers.filter((x): x is number => x != null)).size;
   const notes: GuitarNote[] = [];
   frets.forEach((f, s) => {
     if (f == null) return;
@@ -174,8 +213,7 @@ function makeGrip(c: GChord, r: Recipe, frets: (number | null)[], style: GuitarS
     + (r.type === 'open' || r.type === 'barre' ? 0 : openCount * 0.9)
     + info.lo * 0.05
     + extraCost;
-  const fg = assignFingers(frets);
-  return { type: r.type, name: r.name, sub: sub || r.sub, why: r.why, frets, notes, lo: info.lo, hi: info.hi, span: info.span, fingers: fg.fingers, barre: fg.barre, fingerCount: info.fingers, stretch: info.span >= 5, score };
+  return { type: r.type, name: r.name, sub: sub || r.sub, why: r.why, frets, notes, lo: info.lo, hi: info.hi, span: info.span, fingers: fg.fingers, barre: fg.barre, fingerCount: used, stretch: info.span >= 5, score };
 }
 
 /* ---------- recipes ---------- */
@@ -225,15 +263,12 @@ function recipes(c: GChord): Recipe[] {
     R.push({ type: 'shell', name: '3-note chord', sub: 'root, 3rd, 7th', why: 'Only the notes that say what kind of chord it is. Light, and leaves room for a bass or piano.', degs: [p.root, p.third, p.seventh], offsets: [0, s3, s7], sets: SHELL3 });
     R.push({ type: 'shell', name: '3-note chord', sub: 'root, 7th, 3rd', why: 'The same three notes, with the 7th lower down. The classic rhythm-guitar sound.', degs: [p.root, p.seventh, p.third], offsets: [0, s7, s3 + 12], sets: SHELL3 });
   }
-  /* no root (rule 40): 3rd, 5th (13th on a dominant), 7th, 9th, drop 2 shape */
+  /* no root (rule 40): 3rd, 5th (13th on a dominant), 7th, 9th, drop 2 shape. Alterations the chord names are kept: ♭13 is never swapped for 13. */
   if (p.third && p.seventh && p.seventh.label !== '6' && !THIRDS.slice(2).includes(p.third.label)) {
-    const dominant = p.third.label === '3' && p.seventh.label === '♭7';
-    const ninthLabel = p.all.find(d => ['♭9', '♯9'].includes(d.label) && dominant)?.label ?? '9';
-    const ninthSemis = ninthLabel === '♭9' ? 1 : ninthLabel === '♯9' ? 3 : 2;
-    const fifthDeg: Deg = dominant
-      ? { pc: mod(pcOf(c.tones[0]) + 9, 12), semis: 9, note: degreeNote(c, '13', 9), label: '13' }
-      : (p.fifth ?? { pc: mod(pcOf(c.tones[0]) + 7, 12), semis: 7, note: degreeNote(c, '5', 7), label: '5' });
-    const nine: Deg = { pc: mod(pcOf(c.tones[0]) + ninthSemis, 12), semis: ninthSemis, note: degreeNote(c, ninthLabel, ninthSemis), label: ninthLabel };
+    const dominant = p.third.label === '3' && p.seventh.label === '♭7', r0pc = pcOf(c.tones[0]);
+    const mk = (label: string, semis: number): Deg => ({ pc: mod(r0pc + semis, 12), semis, note: degreeNote(c, label, semis), label });
+    const fifthDeg: Deg = dominant ? (explicit(p, ['♭13', '♯5', '♭5']) ?? explicit(p, ['13']) ?? mk('13', 9)) : (p.fifth ?? mk('5', 7));
+    const nine: Deg = (dominant ? explicit(p, ['♭9', '♯9', '9']) : undefined) ?? mk('9', 2);
     const set = [p.third, fifthDeg, p.seventh, nine];
     closeInversions(set).forEach((inv, i) => {
       const d2 = dropped(inv, 2);
@@ -241,14 +276,34 @@ function recipes(c: GChord): Recipe[] {
     });
   }
   /* So What / fourths (rule 41): minor 7th family only */
-  if (p.third?.label === '♭3' && p.seventh?.label === '♭7' && (!p.fifth || p.fifth.label === '5')) {
+  if (p.third?.label === '♭3' && p.seventh?.label === '♭7' && (!p.fifth || p.fifth.label === '5') && !p.all.some(d => d.label === '♯11')) {
     const a = (semis: number, label: string): Deg => ({ pc: mod(pcOf(c.tones[0]) + semis, 12), semis, note: degreeNote(c, label, semis), label });
     const r0 = p.root, e11 = a(5, '11'), b7 = p.seventh, b3 = p.third, f5 = a(7, '5');
     R.push({ type: 'quartal', name: 'So What', sub: 'stacked fourths', why: 'Three fourths with a major third on top. The sound of "So What" and a lot of modern jazz.', degs: [r0, e11, b7, b3, f5], offsets: [0, 5, 10, 15, 19], sets: [[0, 1, 2, 3, 4]] });
     R.push({ type: 'quartal', name: 'Fourths', sub: 'stacked fourths', why: 'Notes a fourth apart: open, modern, not tied to one chord shape.', degs: [r0, e11, b7, b3], offsets: [0, 5, 10, 15], sets: [[0, 1, 2, 3]] });
   }
+  /* slash chord: the named bass note is the lowest note, whatever the chord's root is (rule 46) */
+  if (c.bass) {
+    const bassPc = pcOf(c.bass), kk = core(c);
+    const upper = kk.filter(d => d.pc !== bassPc && d.label !== 'bass');
+    while (upper.length > 3) { const i = upper.findIndex(d => FIFTHS.includes(d.label)); upper.splice(i >= 0 ? i : upper.length - 1, 1); }
+    const r0 = pcOf(c.tones[0]);
+    const bassDeg: Deg = kk.find(d => d.pc === bassPc) ?? { pc: bassPc, semis: mod(bassPc - r0, 12), note: c.bass, label: 'bass' };
+    /* the notes above the bass can sit in this octave or the next: try every spread, keep the ones that fit strings a fourth apart */
+    const ups = upper.map(d => ({ d, o: mod(d.pc - bassPc, 12) }));
+    const seen = new Set<string>();
+    for (let m = 0; m < 1 << ups.length; m++) {
+      const row = ups.map((u, i) => ({ d: u.d, off: u.o + (m & (1 << i) ? 12 : 0) })).sort((x, y) => x.off - y.off);
+      const key = row.map(x => x.off).join(',');
+      if (seen.has(key) || row.length < 2 || row[row.length - 1].off > 24 || row.some((x, i) => i && x.off === row[i - 1].off)) continue;
+      seen.add(key);
+      R.push({ type: 'slash', name: 'Slash chord', sub: 'bass note ' + noteText(c.bass), why: `The lowest note is ${noteText(c.bass)}, as the chord name says. The other notes sit above it.`, degs: [bassDeg, ...row.map(x => x.d)], offsets: [0, ...row.map(x => x.off)], sets: row.length === 3 ? [[0, 1, 2, 3], [0, 2, 3, 4], [1, 2, 3, 4], [1, 3, 4, 5], [0, 1, 3, 4], [1, 2, 4, 5]] : SHELL3 });
+    }
+    return R.filter(r => r.type === 'slash' || r.degs[0].pc === bassPc);
+  }
   return R;
 }
+const noteText = (n: Note): string => n.letter + (n.acc > 0 ? '♯'.repeat(n.acc) : n.acc < 0 ? '♭'.repeat(-n.acc) : '');
 
 /* ---------- open and barre chords (pop, folk, beginners) ---------- */
 type Canon = 'maj' | 'min' | '7' | 'maj7' | 'm7';
@@ -282,7 +337,7 @@ function shapeGrip(c: GChord, type: 'open' | 'barre', name: string, sub: string,
 }
 function shapes(c: GChord, style: GuitarStyle): Grip[] {
   const q = canon(c);
-  if (!q) return [];
+  if (!q || c.bass) return [];
   const out: Grip[] = [];
   const open = OPEN[q][rootName(c)];
   if (open) {
@@ -304,7 +359,8 @@ function shapes(c: GChord, style: GuitarStyle): Grip[] {
 
 /* ---------- public: grips for a chord ---------- */
 export function gripsFor(c: GChord, style: GuitarStyle = 'jazz'): Grip[] {
-  const all = [...recipes(c).flatMap(r => place(c, r, style)), ...shapes(c, style)];
+  let all = [...recipes(c).flatMap(r => place(c, r, style)), ...shapes(c, style)];
+  if (c.bass) { const bp = pcOf(c.bass); all = all.filter(g => mod(g.notes[0].midi, 12) === bp); }
   /* the same fret pattern can come from two recipes (e.g. a shell and a triad): keep the better-scored one */
   const best = new Map<string, Grip>();
   all.forEach(g => { const k = g.frets.join(','); const o = best.get(k); if (!o || g.score < o.score) best.set(k, g); });
@@ -319,6 +375,15 @@ export const gripMidis = (g: Grip): number[] => g.notes.map(n => n.midi);
 /** The grip's centre on the neck: where the hand sits. */
 const center = (g: Grip): number => (g.lo === 0 ? 0 : (g.lo + g.hi) / 2);
 
+/** How awkward it is to go from one grip to the next: hand movement, note movement, minus notes that can stay put (rule 44). Lower is smoother. */
+export function gripCost(a: Grip, b: Grip): number {
+  const stay = a.notes.filter(n => b.notes.some(m => m.string === n.string && m.fret === n.fret)).length;
+  const am = a.notes.map(n => n.midi), bm = b.notes.map(n => n.midi), k = Math.min(am.length, bm.length);
+  let move = 0;
+  for (let i = 0; i < k; i++) move += Math.abs(bm[bm.length - 1 - i] - am[am.length - 1 - i]);
+  const hand = a.lo === 0 || b.lo === 0 ? 0 : Math.abs(center(a) - center(b));
+  return 0.7 * hand + 0.25 * move - 0.6 * stay;
+}
 /**
  * Smoothest way through a list of chords (rule 44): hand moves little, notes that can stay put do, other notes move by small steps.
  * Dynamic programming over the best few grips of each chord.
@@ -326,14 +391,7 @@ const center = (g: Grip): number => (g.lo === 0 ? 0 : (g.lo + g.hi) / 2);
 export function voiceLead(chords: GChord[], style: GuitarStyle = 'jazz', keep = 12): Grip[] {
   const cands = chords.map(c => { const all = gripsFor(c, style); return all.slice(0, keep); });
   if (cands.some(a => !a.length)) return chords.map(c => gripsFor(c, style)[0]).filter(Boolean);
-  const cost = (a: Grip, b: Grip): number => {
-    const stay = a.notes.filter(n => b.notes.some(m => m.string === n.string && m.fret === n.fret)).length;
-    const am = a.notes.map(n => n.midi), bm = b.notes.map(n => n.midi), k = Math.min(am.length, bm.length);
-    let move = 0;
-    for (let i = 0; i < k; i++) move += Math.abs(bm[bm.length - 1 - i] - am[am.length - 1 - i]);
-    const hand = a.lo === 0 || b.lo === 0 ? 0 : Math.abs(center(a) - center(b));
-    return 0.7 * hand + 0.25 * move - 0.6 * stay;
-  };
+  const cost = gripCost;
   let prev = cands[0].map(g => ({ g, c: g.score, from: -1 }));
   const trail: { g: Grip; c: number; from: number }[][] = [prev];
   for (let i = 1; i < cands.length; i++) {

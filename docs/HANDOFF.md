@@ -25,6 +25,20 @@ and what is easy to get wrong.
 - Sections you open on Move (All routes, Why it works, …) stay open after a click: `keepOpen` / `trackOpen` in pieces.ts.
 - Not built on guitar: drop 2&4, alternate tunings, capo, left-handed. "Exact voicing" is hidden on guitar (it is defined by the piano voicing).
 
+## Audit fixes (branch `fix/audit-guitar`, on top of the guitar work)
+An outside audit found eight problems; each has a regression test (`tests/study/audit.test.ts`, `tests/theory/guitar.test.ts`):
+1. **Impossible fingerings** (little finger on two frets): `assignFingers` now searches only playable fingerings and returns null (grip not offered) instead of clamping (rule 45).
+2. **Dots blocked taps** on the neck: hint/held/stage dots are `pointer-events="none"`; verified in a browser with real hit-testing at every dot centre.
+3. **Practice used the wrong material:** "The move" and "Progression" now practise the route that is selected / the typed chords / any technique, from the same study that is shown and played (`src/study/steps.ts` `routeSteps`; Any voicing and Exact voicing both work). Voicings / This route fall back to the Move route when nothing is kept.
+4. **Parity:** Progression playback, Reharm playback, its MIDI file and its practice transfer, and Melody keep / line / practice all use the grips shown on guitar (kept voicings are stored per instrument: `keptList` etc. in state.ts).
+5. **Recipes contradicted the chord:** ♭13 / ♯9 / ♯11 kept, add9 always has its 9, slash basses kept on piano and guitar (rule 46).
+6. **Instrument switch** now starts a fresh practice session (the session key includes it; "Exact voicing" is only offered where its notes exist).
+7. **Phone and multitouch:** the tappable neck is 720 px wide and pans on a phone (cells at least 44 × 38 px); a note lasts until the last finger on any place that sounds it lifts (`PressTracker`).
+8. **Stop** cancels the whole kept line (one `playSeq`, no loose timers).
+
+Verified in a browser: 390 / 820 / 1366, an eight-chord Coltrane route (7 passing + landing) on guitar with sliding dots, A/B, saved-state reload (instrument, A, route, groups), real taps on every hint dot, two fingers on one pitch, and **offline launch in real Chrome** (service worker active, cache named by the build hash, the app and the neck render with the network off).
+Still uncertain: sound and feel by ear, a real iPad (multitouch, pan versus tap), a real S88, and fingerings on real hands.
+
 ## Baseline
 - **Live:** https://yakovwillner1-rgb.github.io/two-five-app/ = `main` at the merge of PR #11 (the **v2 design**). Load it twice
   after a deploy (service worker).

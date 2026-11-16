@@ -183,3 +183,65 @@ describe('chart chords', () => {
     expect(fromChord({ symbol: 'Dm7', tones: c.tones }).labels).toEqual(['R', '♭3', '5', '♭7']);
   });
 });
+
+/* ---------- audit regressions ---------- */
+/** An independent check that a hand can play a fingering: a higher finger is never on a lower fret, a finger plays one note unless it is an index barre, neighbouring fingers reach one fret more than their gap. */
+function playable(g: Grip): string | null {
+  const nn = g.notes.filter(n => n.fret > 0).map(n => ({ fr: n.fret, fi: g.fingers[n.string] as number, s: n.string }));
+  if (nn.some(n => !(n.fi >= 1 && n.fi <= 4))) return 'a finger outside 1-4';
+  for (const a of nn) for (const b of nn) {
+    if (a === b) continue;
+    if (a.fi === b.fi && !(a.fi === 1 && a.fr === b.fr)) return `finger ${a.fi} plays frets ${a.fr} and ${b.fr}`;
+    if (a.fi < b.fi && a.fr > b.fr) return `finger ${a.fi} on fret ${a.fr} is above finger ${b.fi} on fret ${b.fr}`;
+    if (a.fi < b.fi && b.fr - a.fr > b.fi - a.fi + 1) return `fingers ${a.fi} and ${b.fi} cannot reach frets ${a.fr} and ${b.fr}`;
+  }
+  const bar = nn.filter(n => n.fi === 1);
+  if (bar.length > 1) { const lo = Math.min(...bar.map(n => n.s)), hi = Math.max(...bar.map(n => n.s)); if (g.frets.some((f, s) => f === 0 && s > lo && s < hi)) return 'an open string under the barre'; }
+  return null;
+}
+describe('audit: fingerings are physically possible', () => {
+  it('Cmaj7 x-7-x-5-8-7 no longer puts the little finger on two frets', () => {
+    const g = find('Cmaj7', 'x-7-x-5-8-7');
+    if (g) { expect(playable(g)).toBeNull(); expect(new Set(g.notes.map(n => g.fingers[n.string])).size).toBe(4); }
+  });
+  it('every grip of 12 roots x 14 chord types passes the independent hand check', () => {
+    const bad: string[] = [];
+    for (const r of ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']) for (const k of ['maj7', 'm7', '7', 'm7♭5', '°7', '9', '13', '6', 'm6', 'maj9', 'm9', '7sus4', '7♭9', '7♯11', 'add9']) {
+      gripsFor(G(r + k)).forEach(g => { const e = playable(g); if (e) bad.push(`${r}${k} ${gripText(g)}: ${e}`); });
+    }
+    expect(bad).toEqual([]);
+  }, 60000);
+  it('a grip nobody can finger is not offered (four notes on four different frets 5 apart)', () => {
+    const c = G('Cmaj7');
+    expect(gripsFor(c).every(g => g.span <= 5)).toBe(true);
+  });
+});
+describe('audit: recipes keep the chord that was asked for', () => {
+  const pcs = (g: Grip) => new Set(g.notes.map(n => mod(n.midi, 12)));
+  it('C7♭13 keeps A♭ and never inserts A natural', () => {
+    const list = gripsFor(G('C7b13'));
+    expect(list.some(g => g.type === 'rootless')).toBe(true);
+    list.forEach(g => { expect(pcs(g).has(9), `${gripText(g)} has A natural`).toBe(false); });
+    list.filter(g => g.type === 'rootless').forEach(g => expect(pcs(g).has(8)).toBe(true));
+  });
+  it('C7♯9 keeps the ♯9 (E♭ stays, no natural 9 D)', () => {
+    gripsFor(G('C7#9')).filter(g => g.type === 'rootless' || g.type === 'drop2').forEach(g => expect(pcs(g).has(2), gripText(g)).toBe(false));
+  });
+  it('Cadd9 always has its D (no plain triad without the added note)', () => {
+    const list = gripsFor(G('Cadd9'));
+    expect(list.length).toBeGreaterThan(0);
+    list.forEach(g => expect(pcs(g).has(2), `${g.type} ${gripText(g)}`).toBe(true));
+  });
+  it('C13♯11 keeps the ♯11', () => {
+    gripsFor(G('C13#11')).filter(g => g.type === 'drop2').forEach(g => expect(pcs(g).has(6), gripText(g)).toBe(true));
+  });
+  it('a slash chord puts its bass note lowest: C/E and F/G (bass not in the chord)', () => {
+    for (const [sym, bass] of [['C/E', 4], ['F/G', 7], ['Am7/G', 7], ['D/F#', 6]] as const) {
+      const list = gripsFor(G(sym));
+      expect(list.length, sym).toBeGreaterThan(0);
+      list.forEach(g => expect(mod(g.notes[0].midi, 12), `${sym} ${gripText(g)}`).toBe(bass));
+    }
+    const fg = gripsFor(G('F/G'));
+    fg.forEach(g => { const allowed = new Set([5, 9, 0, 7]); expect(g.notes.every(n => allowed.has(mod(n.midi, 12)))).toBe(true); });
+  });
+});

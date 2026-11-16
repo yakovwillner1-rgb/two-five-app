@@ -2,20 +2,21 @@ import { getOut, screenOn, sendOff, sendOn } from '../audio/midiOut';
 import { tone } from '../audio/player';
 import { audio } from '../audio/synth';
 import { midi } from '../midi/input';
-import { S, curMode, curTitle } from '../state';
+import { S, curKey, curMode, curTitle, keptList } from '../state';
 import { fmt, mod, note, pcOf } from '../theory/notes';
 import { PlaySession, buildSteps, voicingStep, type Step } from '../theory/playcheck';
 import { burstAt, confetti, countUp, reduced, ripple } from './motion';
 import { chordBox, eventBox, inputNeck, midiName, positionsOf, positionsOfPc, type GhostDot, type HeldDot } from './fretboard';
 import { assignFingers, fromChord, gripsFor, styleForGenre } from '../theory/guitar';
+import { PressTracker } from './press';
 import { cref, soundBox } from './pieces';
 import { ROLE_VAR, roleOfSymbol } from './role';
-import type { Flavor } from '../theory/types';
-import { moveModel } from './views/move';
-import { progSteps } from './views/prog';
+import { moveModel, moveSeq, moveStudy } from './views/move';
+import { progSeq, progStudy } from './views/prog';
+import { routeSteps } from '../study/steps';
 
 /* Play it: Web MIDI input + on-screen piano, checked by the pure PlaySession. */
-const held = new Set<number>(), ptrNote: Record<number, number> = {};
+const held = new Set<number>();
 /** Set by the Listen tab: called whenever the held notes change while it is open. */
 export const heldHook = { changed: (_held: Set<number>): void => {} };
 /** Set by the Melody tab: called when the held notes change while it is open; `ghost` marks keys on the piano there. */
@@ -23,7 +24,8 @@ export const leadHook = { changed: (_held: Set<number>): void => {}, ghost: (): 
 /** Let go of every held note (latched on-screen keys). */
 export function releaseAll(): void { [...held].forEach(noteOff); }
 /** Where on the guitar neck each held note was tapped (a MIDI keyboard gives no position, so a sensible one is chosen). */
-const heldPos = new Map<number, { s: number; f: number }>();
+/* Several fingers can sit on neck positions that sound the same pitch: count the presses so the note lasts until the last one lifts. */
+const pressPos = new Map<number, { n: number; s: number; f: number }>(), tracker = new PressTracker();
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
 /* combo / accuracy of this run: a unit is one chord (or one scale note); it is clean when no wrong note came in it */
 let combo = 0, bestCombo = 0, units = 0, cleanUnits = 0, unitKey = '', unitWrong = 0, scoreShown = false, comboBump = false;
@@ -32,24 +34,25 @@ let chkT: ReturnType<typeof setTimeout> | undefined, flashT: ReturnType<typeof s
 /* Play it checks chords it has a scale for: the chords of the key and their 2-5s. A 2-5 chosen on the
    Move or Progression tab is used with its color; other passing chords and typed chords are skipped
    until the voicing engine (Phase 2) can check them. */
-function steps(): Step[] {
+export function steps(): Step[] {
   /* voicings kept on the Melody tab: each one exactly as kept */
-  if (S.px === 'lead' && S.lkept.length) return S.lkept.map((k, i) => voicingStep(k.sym, `${k.name} · ${i + 1} of ${S.lkept.length}`, k.notes.map(n => ({ midi: n.m, name: fmt(note(n.n)) }))));
+  if (S.px === 'lead' && keptList().length) return keptList().map((k, i) => voicingStep(k.sym, `${k.name} · ${i + 1} of ${keptList().length}`, k.notes.map(n => ({ midi: n.m, name: fmt(note(n.n)) }))));
   /* a study captured on Move: exactly its pitches, whatever the route (not a ii–V stand-in) */
   if (S.px === 'study' && S.practiceStudy) return S.practiceStudy.events.map(e => voicingStep(e.symbol, 'Selected route · ' + e.beats + ' beats when played', e.midis.map((midi, i) => ({ midi, name: e.names[i] }))));
-  const sel = S.px === 'move' ? moveModel().sel : null;
-  const flavor: Flavor = sel?.techniqueId === 'secIIV' ? (sel.variant as Flavor) : S.flavor;
-  const vias = S.px === 'prog' ? progSteps() : [];
-  const prog = S.prog.map((p, i) => ({ p, via: vias[i]?.via })).filter(x => !x.p.sym)
-    .map(({ p, via }) => ({ d: p.d, a: via?.techniqueId === 'secIIV' && via.chords.length === 2, flavor: via?.techniqueId === 'secIIV' ? (via.variant as Flavor) : undefined }));
-  return buildSteps({ px: S.px === 'lead' || S.px === 'study' ? 'move' : S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor, prog, allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
+  /* the route on Move and the progression: the same resolved material that is shown and played, whatever the technique.
+     (Voicings / This route with nothing kept or captured yet also practise the Move route.) */
+  if (S.px === 'prog') { const q = progSeq(); return routeSteps(progStudy(), q.chords, curKey(), q.labels); }
+  if (S.px !== 'random' && S.px !== 'mode') { const m = moveModel(), q = moveSeq(m); return routeSteps(moveStudy(m), q.chords, curKey(), q.chords.map((_c, i) => (i === 0 && !m.sel?.replacesFrom ? 'Start chord' : i === q.chords.length - 1 ? 'Landing chord' : 'Passing chord'))); }
+  return buildSteps({ px: S.px, pc: S.pc, mode: S.mode, from: S.from, to: S.to, flavor: S.flavor, prog: [], allKeys: S.pall, modeDetail: () => curMode(), rng: Math.random });
 }
-const playSig = (): string => JSON.stringify([S.practiceStudy, S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.way, S.pgenre, S.pfeel, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall, S.px === 'lead' ? S.lkept : 0]);
+export const playSig = (): string => JSON.stringify([S.inst, S.practiceStudy, S.px, S.pc, S.mode, S.from, S.to, S.flavor, S.way, S.pgenre, S.pfeel, S.prog, S.mfam, S.mdeg, S.mroot, S.mview, S.pstrict, S.pall, S.px === 'lead' ? keptList() : 0]);
+/** "Exact voicing" means the notes of the route as resolved for the chosen instrument; for random 2-5s it is defined by the piano voicing, so not on guitar. */
+export const strictOk = (): boolean => S.px === 'move' || S.px === 'prog' || (S.px === 'random' && S.inst !== 'guitar');
 export function resetPL(): void {
   clearTimeout(chkT);
   sig = playSig(); t0 = 0; elapsed = 0;
   combo = bestCombo = units = cleanUnits = 0; unitKey = ''; unitWrong = 0; scoreShown = false; comboBump = false;
-  ses = new PlaySession(steps(), S.pstrict && S.inst !== 'guitar', held, S.px === 'random' ? steps : undefined);
+  ses = new PlaySession(steps(), strictOk() && S.pstrict, held, S.px === 'random' ? steps : undefined);
 }
 
 export function noteOn(n: number, src: 'screen' | 'midi'): void {
@@ -68,7 +71,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   keyRipple(n, r.mark === 'bad' ? 'bad' : r.mark === 'ok' ? 'ok' : 'on');
 }
 export function noteOff(n: number): void {
-  heldPos.delete(n);
+  pressPos.forEach((v, k) => { if (v.n === n) pressPos.delete(k); });
   if (screenOn.has(n)) { screenOn.delete(n); const o = getOut(); if (o) sendOff(o, n); }
   if (ses) ses.noteOff(n);
   held.delete(n);
@@ -152,8 +155,9 @@ function guitarKeys(): string {
   if (S.phint && st && P) {
     if (st.kind === 'scale') { const pc = st.seq[P.si]; if (pc != null) positionsOfPc(pc).filter(p => p.f <= 12).forEach(p => ghosts.push({ s: p.s, f: p.f, label: midiName(pc) })); }
     else if (st.kind === 'voicing') {
-      const ev = S.px === 'study' && S.practiceStudy?.instrument === 'guitar' ? S.practiceStudy.events[P.i] : null;
-      if (ev?.frets) { const fg = assignFingers(ev.frets); ev.frets.forEach((f, s) => { if (f != null) ghosts.push({ s, f, label: f === 0 ? '○' : String(fg.fingers[s] ?? '') }); }); }
+      const kg = S.px === 'lead' ? keptList()[P.i]?.grip : null;
+      const ev = S.px === 'study' && S.practiceStudy?.instrument === 'guitar' ? S.practiceStudy.events[P.i] : kg ? { frets: kg.frets, fingers: kg.fingers } : null;
+      if (ev?.frets) { const fg = assignFingers(ev.frets); ev.frets.forEach((f, s) => { if (f != null) ghosts.push({ s, f, label: f === 0 ? '○' : String(ev.fingers?.[s] ?? fg?.fingers[s] ?? '') }); }); }
       else near(st.midis).forEach((p, i) => ghosts.push({ s: p.s, f: p.f, label: midiName(st.midis[i]) }));
     } else {
       const g = gripsFor(fromChord(st.chord), styleForGenre(S.pgenre))[0];
@@ -162,9 +166,12 @@ function guitarKeys(): string {
   }
   if (S.tab === 'lead') Object.keys(leadHook.ghost()).forEach(k => { const m = +k, ps = positionsOf(m).length ? positionsOf(m) : positionsOf(m + (m < 64 ? 12 : -12)); ps.forEach(p => ghosts.push({ s: p.s, f: p.f, label: midiName(m) })); });
   const dots: HeldDot[] = [];
+  const placed = new Set<number>();
+  pressPos.forEach(p => { if (held.has(p.n)) { dots.push({ s: p.s, f: p.f, mark: (P?.marks[p.n] as 'ok' | 'bad' | undefined) || 'on', name: midiName(p.n) }); placed.add(p.n); } });
   held.forEach(m => {
+    if (placed.has(m)) return;
     const hint = ghosts.find(g => positionsOf(m).some(p => p.s === g.s && p.f === g.f));
-    const pos = heldPos.get(m) ?? (hint ? { s: hint.s, f: hint.f } : positionsOf(m).sort((a, b) => a.f - b.f)[0]);
+    const pos = hint ? { s: hint.s, f: hint.f } : positionsOf(m).sort((a, b) => a.f - b.f)[0];
     if (pos) dots.push({ s: pos.s, f: pos.f, mark: (P?.marks[m] as 'ok' | 'bad' | undefined) || 'on', name: midiName(m) });
   });
   return inputNeck(dots, ghosts.filter(g => !dots.some(d => d.s === g.s && d.f === g.f)));
@@ -207,7 +214,16 @@ function pianoSVG(): string {
   return `<svg viewBox="0 0 ${x + 1} ${H + 1}" role="img" aria-label="Piano keyboard">${w}${b}</svg>`;
 }
 export function drawMidi(): void { const M = document.getElementById('midibar'); if (M) M.innerHTML = midiHTML(); }
-export function drawKeys(): void { const K = document.getElementById('pkwrap'); if (K && (ses || S.tab === 'listen' || S.tab === 'lead')) K.innerHTML = pianoSVG(); }
+export function drawKeys(): void {
+  const K = document.getElementById('pkwrap');
+  if (!K || !(ses || S.tab === 'listen' || S.tab === 'lead')) return;
+  K.classList.toggle('pkg', S.inst === 'guitar');
+  K.innerHTML = pianoSVG();
+  if (S.inst === 'guitar') { /* keep the hint dots in view when the neck is wider than the screen */
+    const g = K.querySelector('.gghost,.ghold');
+    if (g) { const r = g.getBoundingClientRect(), kr = K.getBoundingClientRect(); if (r.left < kr.left + 24 || r.right > kr.right - 24) K.scrollLeft += r.left - kr.left - kr.width / 3; }
+  }
+}
 function trackUnits(): void {
   const P = ses!, key = P.done ? 'done' : `${P.rounds}.${P.i}.${P.si}`;
   if (P.wrong > unitWrong && combo > 0) combo = 0;
@@ -244,26 +260,31 @@ export function bindPiano(): void {
     const r = (e.target as Element).closest<SVGElement>('[data-n]');
     if (!r) return;
     e.preventDefault();
-    const n = +r.dataset.n!;
-    if (r.dataset.s) heldPos.set(n, { s: +r.dataset.s, f: +r.dataset.f! });
+    const n = +r.dataset.n!, pos = r.dataset.s ? { n, s: +r.dataset.s, f: +r.dataset.f! } : null;
     /* latch (Listen): a tap toggles the key, so a chord can be built with a mouse */
-    if (S.tab === 'listen' && S.llatch) { if (held.has(n)) noteOff(n); else noteOn(n, 'screen'); return; }
-    ptrNote[e.pointerId] = n;
+    if (S.tab === 'listen' && S.llatch) { if (held.has(n)) noteOff(n); else { if (pos) pressPos.set(1e6 + n, pos); noteOn(n, 'screen'); } return; }
+    if (pos) pressPos.set(e.pointerId, pos);
+    const first = tracker.down(e.pointerId, n);
     try { K.setPointerCapture(e.pointerId); } catch (_) { /* not capturable */ }
-    noteOn(n, 'screen');
+    if (first) noteOn(n, 'screen'); else drawKeys();
   });
-  const up = (e: PointerEvent) => { const n = ptrNote[e.pointerId]; if (n != null) { delete ptrNote[e.pointerId]; noteOff(n); } };
+  const up = (e: PointerEvent) => {
+    pressPos.delete(e.pointerId);
+    const r = tracker.up(e.pointerId);
+    if (!r) return;
+    if (r.last) noteOff(r.note); else drawKeys();
+  };
   K.addEventListener('pointerup', up); K.addEventListener('pointercancel', up);
 }
 export function viewPlay(): string {
   if (!ses || sig !== playSig()) resetPL();
   const sw = (a: string, on: boolean, l: string) => `<button class="switch" role="switch" data-a="${a}" aria-checked="${on}">${l}<i></i></button>`;
-  const src = S.px === 'study' && S.practiceStudy ? 'Uses the exact route you picked on Move. Match its notes bottom to top; any octave counts. Timing is not graded.' : S.px === 'move' ? 'Uses the move set on the Move tab.' : S.px === 'prog' ? 'Uses the chords on the Progression tab.' : S.px === 'mode' ? 'Uses the mode picked on the Modes tab. Change the root with the key button.' : S.px === 'lead' ? (S.lkept.length ? 'Uses the voicings you kept on the Melody tab, exactly as kept.' : 'No voicings kept yet: keep some on the Melody tab. Showing the move until then.') : 'Random 2‑5s into the chords of the home key.';
+  const src = S.px === 'study' && S.practiceStudy ? 'Uses the exact route you picked on Move. Match its notes bottom to top; any octave counts. Timing is not graded.' : S.px === 'move' ? 'Uses the move set on the Move tab.' : S.px === 'prog' ? 'Uses the chords on the Progression tab.' : S.px === 'mode' ? 'Uses the mode picked on the Modes tab. Change the root with the key button.' : S.px === 'lead' ? (keptList().length ? 'Uses the voicings you kept on the Melody tab, exactly as kept.' : 'No voicings kept yet: keep some on the Melody tab. Showing the move until then.') : 'Random 2‑5s into the chords of the home key.';
   return `<div class="stack">
    <div style="text-align:center"><div class="eyebrow">Play it · ${S.px === 'mode' ? 'Modes' : curTitle()}</div><h2>Play it and get <em>checked</em></h2></div>
    <div class="panel pctl">
      <div class="pcrow"><span class="lbl">Practice</span><div class="seg" role="group" aria-label="What to practice">${([['study', 'This route'], ['move', 'The move'], ['prog', 'Progression'], ['random', 'Random 2‑5s'], ['mode', 'Mode scale'], ['lead', 'Voicings']] as const).map(([k, l]) => `<button data-a="px" data-v="${k}" ${k === 'study' && !S.practiceStudy ? 'disabled' : ''} aria-pressed="${S.px === k}">${l}</button>`).join('')}</div></div>
-     ${S.inst !== 'guitar' && S.px !== 'study' && S.px !== 'mode' && !(S.px === 'lead' && S.lkept.length) ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
+     ${strictOk() ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
      <div class="pcrow sws">${sw('phint', S.phint, 'Show the notes')}${S.px === 'random' ? sw('pall', S.pall, 'All 12 keys') : ''}${S.soundOut ? '' : sw('psound', S.psound, 'Sound for MIDI notes')}</div>
    </div>
    <div class="midibar" id="midibar"></div>

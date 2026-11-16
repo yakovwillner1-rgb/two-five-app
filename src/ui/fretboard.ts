@@ -18,7 +18,7 @@ export function eventBox(e: StudyEvent): BoxGrip | null {
   if (!e.frets || !e.strings) return null;
   const f = e.frets.filter((x): x is number => x != null && x > 0), fg = assignFingers(e.frets);
   const notes = e.strings.map((s, i) => { const lab = e.labels?.[i] ?? ''; return { string: s, fret: e.midis[i] - TUNING[s], midi: e.midis[i], note: { letter: 'C' as const, acc: 0 }, label: lab, role: (lab === 'R' ? 'root' : ['3', '♭3', '4', '7', '♭7', '𝄫7'].includes(lab) ? 'guide' : 'color') as 'root' | 'guide' | 'color' }; });
-  return { frets: e.frets, notes, lo: f.length ? Math.min(...f) : 0, hi: f.length ? Math.max(...f) : 0, fingers: e.fingers ?? fg.fingers, barre: fg.barre };
+  return { frets: e.frets, notes, lo: f.length ? Math.min(...f) : 0, hi: f.length ? Math.max(...f) : 0, fingers: e.fingers ?? fg?.fingers ?? e.frets.map(() => null), barre: fg?.barre ?? null };
 }
 
 /** A chord box: 6 strings, 5 frets. The number in a dot is the finger; the colour says what the note does (root gold, 3rd/7th mint, others blue). */
@@ -45,9 +45,12 @@ export function chordBox(g: BoxGrip, label = ''): string {
 }
 
 /* ---------- the neck: shared geometry ---------- */
-const FRETS = 15, M = 46, W = 46, SP = 26, T = 22, H = T + SP * 5 + 40;
+let SP = 26, H = 22 + SP * 5 + 40;
+const FRETS = 15, M = 46, W = 46, T = 22;
 const fx = (f: number): number => (f === 0 ? M - 20 : M + (f - 0.5) * W);
 const sy = (s: number): number => T + (5 - s) * SP;
+/** The neck's string spacing: 26 to look at, 40 where it is tapped (a fingertip needs about 38 px). */
+function geometry(sp: number): void { SP = sp; H = T + SP * 5 + 40; }
 function neckBase(): string {
   let svg = `<rect x="${M}" y="${T - 10}" width="${FRETS * W}" height="${SP * 5 + 20}" rx="6" class="gn-board"/>`;
   for (let k = 0; k <= FRETS; k++) svg += `<line x1="${M + k * W}" y1="${T - 10}" x2="${M + k * W}" y2="${T + SP * 5 + 10}" class="${k === 0 ? 'gl-nut' : 'gn-fret'}"/>`;
@@ -59,7 +62,7 @@ function neckBase(): string {
   }
   return svg;
 }
-const VB = `0 0 ${M + FRETS * W + 14} ${H}`;
+const vb = (): string => `0 0 ${M + FRETS * W + 14} ${H}`;
 const labelSwitch = (): string => `<span class="seg lblseg" role="group" aria-label="What the dots show">${(['finger', 'note'] as const).map(k => `<button data-a="neckl" data-v="${k}" aria-pressed="${S.neckLabel === k}">${k === 'finger' ? 'Fingers' : 'Notes'}</button>`).join('')}</span>`;
 
 /** The whole neck with one dot per string; data-gl carries every chord's dot positions (see motion.ts glSet). */
@@ -78,10 +81,10 @@ export function neckStage(study: Study, ids: string[], cls: string[], cue: { fro
     }),
   }));
   const first = ev[0];
-  const dot = (s: number) => { const d = first.dots[s]; return `<g class="gdot ${d?.role ?? 'other'}${d ? '' : ' gone'}${d?.cue ? ' cue' : ''}" style="transform:translate(${d?.x ?? fx(0)}px,${sy(s)}px)"><circle r="11.5"/><text class="t-fin">${d?.f ?? ''}</text><text class="t-note">${d?.n ?? ''}</text></g>`; };
+  const dot = (s: number) => { const d = first.dots[s]; return `<g pointer-events="none" class="gdot ${d?.role ?? 'other'}${d ? '' : ' gone'}${d?.cue ? ' cue' : ''}" style="transform:translate(${d?.x ?? fx(0)}px,${sy(s)}px)"><circle r="11.5"/><text class="t-fin">${d?.f ?? ''}</text><text class="t-note">${d?.n ?? ''}</text></g>`; };
   const data = JSON.stringify({ ids, ev, tune: [...TUNING] }).replace(/'/g, '&#39;');
   return `<div class="vl gl lbl-${S.neckLabel}" data-gl='${data}' data-role="${first.col}"><div class="vl-h"><span>Notes played</span><span class="sw"><i style="background:var(--gold)"></i>root</span><span class="sw"><i style="background:var(--accent)"></i>3rd</span><span class="sw"><i style="background:var(--ink)"></i>7th</span><span class="sw"><i style="background:var(--c0)"></i>other</span>${labelSwitch()}</div>
-    <div class="neckscroll" data-focus="${fx(Math.max(1, lo - 1))}"><svg viewBox="${VB}" role="img" aria-label="The whole guitar neck showing the notes played">${neckBase()}${[0, 1, 2, 3, 4, 5].map(dot).join('')}</svg></div></div>`;
+    <div class="neckscroll" data-focus="${fx(Math.max(1, lo - 1))}"><svg viewBox="${vb()}" role="img" aria-label="The whole guitar neck showing the notes played">${neckBase()}${[0, 1, 2, 3, 4, 5].map(dot).join('')}</svg></div></div>`;
 }
 
 /** Every place the notes of a scale are on the neck. `pcs` are pitch classes with a name and a kind: the root, the note that gives the mode its sound, or another note. */
@@ -90,24 +93,27 @@ export function scaleNeck(pcs: { pc: number; name: string; kind: 'root' | 'char'
   for (let s = 0; s < 6; s++) for (let f = 0; f <= FRETS; f++) {
     const p = pcs.find(x => x.pc === (TUNING[s] + f) % 12);
     if (!p) continue;
-    svg += `<g class="gsc ${p.kind}" data-ev="s${p.idx}" transform="translate(${fx(f)} ${sy(s)})"><circle r="10.5"/><text>${p.name}</text></g>`;
+    svg += `<g pointer-events="none" class="gsc ${p.kind}" data-ev="s${p.idx}" transform="translate(${fx(f)} ${sy(s)})"><circle r="10.5"/><text>${p.name}</text></g>`;
   }
-  return `<div class="vl gl"><div class="neckscroll" data-focus="0"><svg viewBox="${VB}" role="img" aria-label="Where the scale's notes are on the guitar neck">${svg}</svg></div></div>`;
+  return `<div class="vl gl"><div class="neckscroll" data-focus="0"><svg viewBox="${vb()}" role="img" aria-label="Where the scale's notes are on the guitar neck">${svg}</svg></div></div>`;
 }
 
 /** A tappable neck. `held` are the notes sounding now (colour = right / wrong / just held); `ghosts` are hint dots (gold) with a finger or note label. */
 export interface HeldDot { s: number; f: number; mark: 'ok' | 'bad' | 'on'; name: string }
 export interface GhostDot { s: number; f: number; label: string }
 export function inputNeck(held: HeldDot[], ghosts: GhostDot[]): string {
+  geometry(40);
   let svg = neckBase();
   const ghostKey = new Set(ghosts.map(g => `${g.s},${g.f}`));
   for (let s = 0; s < 6; s++) for (let f = 0; f <= FRETS; f++) {
     const x0 = f === 0 ? 0 : M + (f - 1) * W, w = f === 0 ? M : W;
     svg += `<rect data-n="${TUNING[s] + f}" data-s="${s}" data-f="${f}" x="${x0}" y="${sy(s) - SP / 2}" width="${w}" height="${SP}" class="gn-hit"/>`;
   }
-  ghosts.forEach(g => { svg += `<g class="gghost" transform="translate(${fx(g.f)} ${sy(g.s)})"><circle r="11"/><text>${g.label}</text></g>`; });
-  held.forEach(h => { svg += `<g class="ghold ${h.mark}${ghostKey.has(`${h.s},${h.f}`) ? ' on-hint' : ''}" transform="translate(${fx(h.f)} ${sy(h.s)})"><circle r="12"/><text>${h.name}</text></g>`; });
-  return `<svg viewBox="${VB}" role="img" aria-label="Guitar neck: tap a fret to play a note">${svg}</svg>`;
+  ghosts.forEach(g => { svg += `<g pointer-events="none" class="gghost" transform="translate(${fx(g.f)} ${sy(g.s)})"><circle r="11"/><text>${g.label}</text></g>`; });
+  held.forEach(h => { svg += `<g pointer-events="none" class="ghold ${h.mark}${ghostKey.has(`${h.s},${h.f}`) ? ' on-hint' : ''}" transform="translate(${fx(h.f)} ${sy(h.s)})"><circle r="12"/><text>${h.name}</text></g>`; });
+  const out = `<svg viewBox="${vb()}" role="img" aria-label="Guitar neck: tap a fret to play a note">${svg}</svg>`;
+  geometry(26);
+  return out;
 }
 /** Every neck position (string, fret) of a MIDI pitch, frets 0 to 15. */
 export function positionsOf(midi: number): { s: number; f: number }[] {

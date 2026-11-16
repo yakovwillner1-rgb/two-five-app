@@ -1,9 +1,9 @@
 import { toTop } from '../scroll';
-import { playGrip, playNotes, stopAll } from '../../audio/player';
-import { gripNames, gripText, gripsWithTop, styleForGenre, type Grip } from '../../theory/guitar';
+import { playGrip, playNotes, playSeq } from '../../audio/player';
+import { gripCost, gripNames, gripText, gripsWithTop, styleForGenre, type Grip } from '../../theory/guitar';
 import { chordBox } from '../fretboard';
 import { GENRES, GENRE_IDS } from '../../data/styles';
-import { S, curChords, curKey, curTitle, type KeptVoicing } from '../../state';
+import { S, curChords, curKey, curTitle, keptClear, keptList, keptPop, keptPush, type KeptVoicing } from '../../state';
 import { impliedNext, leadVoicings, melodyCheck, parsePitch, pitchName, rankLead, voiceMotion, type LeadVoicing, type MelodyCheck, type RankedVoicing } from '../../theory/lead';
 import { fmt, note, noteName } from '../../theory/notes';
 import { famOfKind, fromChart, type KindId, type PChord } from '../../theory/symbols';
@@ -26,7 +26,7 @@ function model(): Model {
   const base = pickChord(S.lsym, S.ld), key = curKey(), H = curChords();
   const next = S.lnx != null && H[S.lnx] ? fromChart(H[S.lnx]) : null, nx = impliedNext(base.chord, next, key);
   const choices = extChoices(base.chord, nx), chord = withExt(base.chord, S.lext, nx);
-  const prev = S.lkept[S.lkept.length - 1] ?? null;
+  const prev = last(keptList()) ?? null;
   return {
     chord, bad: base.bad, choices, next, prev, check: melodyCheck(chord, S.lmel, next, key),
     ranked: rankLead(leadVoicings(chord, S.lmel, next, key), prev ? prev.notes.map(n => n.m) : null, GENRES[S.pgenre].voicings),
@@ -67,9 +67,11 @@ function checkHTML(m: Model): string {
   return `<div class="lcheck ${cls}"><span class="ltag">${tag}</span><span>${c.text}</span></div>${fixes}`;
 }
 function keptHTML(): string {
-  if (!S.lkept.length) return '<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
-  const cols = S.lkept.map((k, i) => {
-    const prev = i > 0 ? S.lkept[i - 1] : null, mo = prev ? voiceMotion(prev.notes.map(n => n.m), k.notes.map(n => n.m)) : null;
+  if (S.inst === 'guitar') return keptGuitarHTML();
+  const kept = keptList();
+  if (!kept.length) return '<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
+  const cols = kept.map((k, i) => {
+    const prev = i > 0 ? kept[i - 1] : null, mo = prev ? voiceMotion(prev.notes.map(n => n.m), k.notes.map(n => n.m)) : null;
     const rows = [...k.notes].reverse().map((n, j) => {
       const mv = mo ? mo.moves[k.notes.length - 1 - j].semis : null;
       return `<span class="lvn${mv === 0 ? ' stay' : ''}" style="--hc:${j === 0 ? 'var(--gold)' : HAND[n.h]}"><b>${pitchName(n.m, note(n.n))}</b><small>${n.lab}${mv === null ? '' : ' · ' + signed(mv)}</small></span>`;
@@ -80,14 +82,24 @@ function keptHTML(): string {
     <div class="lvline scrollx">${cols}</div>
     <div class="controls" style="margin-top:12px"><button class="pill sm go" data-a="lplay">Practice these in Play it</button><button class="pill sm" data-a="lkall">▶ Hear the line</button><button class="pill sm" data-a="lundo">Remove last</button><button class="pill sm" data-a="lkclear">Clear</button></div></div>`;
 }
+/** Guitar: the line of grips you kept, one chord box per chord. */
+function keptGuitarHTML(): string {
+  const kept = keptList();
+  if (!kept.length) return '<div class="panel"><h3>Your line of shapes</h3><p class="small" style="margin:0">Keep a shape and it starts a line here. The next chord\'s shapes are then listed smoothest first (the hand moves least).</p></div>';
+  const cols = kept.map((k, i) => `${i > 0 ? '<div class="lvarr">→</div>' : ''}<button class="lvcol" data-a="lkhear" data-i="${i}" aria-label="Hear ${k.sym}, ${k.name}"><span class="cs2">${k.sym}</span><span class="small">${k.name}</span>${k.grip ? chordBox(k.grip, k.sym) + `<span class="small">frets ${gripText(k.grip)}</span>` : ''}</button>`).join('');
+  return `<div class="panel"><h3>Your line of shapes</h3><p class="small" style="margin:0 0 10px">Each column is a shape you kept. Tap a column to hear it, or play the whole line.</p>
+    <div class="lvline scrollx">${cols}</div>
+    <div class="controls" style="margin-top:12px"><button class="pill sm go" data-a="lplay">Practice these in Play it</button><button class="pill sm" data-a="lkall">▶ Hear the line</button><button class="pill sm" data-a="lundo">Remove last</button><button class="pill sm" data-a="lkclear">Clear</button></div></div>`;
+}
 /** Guitar: grips with the melody note as the highest note (chord melody). */
 let LGR: Grip[] = [];
 function guitarLead(m: Model): string {
-  LGR = gripsWithTop(m.chord, S.lmel, styleForGenre(S.pgenre)).slice(0, 12);
+  const prevG = last(keptList())?.grip ?? null;
+  LGR = gripsWithTop(m.chord, S.lmel, styleForGenre(S.pgenre)).map(g => ({ g, c: g.score + (prevG ? gripCost(prevG, g) : 0) })).sort((a, b) => a.c - b.c).map(x => x.g).slice(0, 12);
   const name = melName(m);
-  return `<div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${name} on top</h3><span class="small">${LGR.length} shape${LGR.length === 1 ? '' : 's'} on guitar, easiest first. The melody note is the highest string you play.</span></div>
-   ${LGR.length ? `<div class="cards extcards">${LGR.map((g, i) => `<article class="card r1"><div class="ch"><span class="cs">${g.name}</span><span class="cn">${g.sub}</span></div>${chordBox(g, m.chord.symbol)}<div class="small">frets ${gripText(g)} · notes ${gripNames(g)}</div><div class="small">${g.why}</div><div class="btns"><button class="hear" data-a="lgrip" data-i="${i}">▶ Hear it</button></div></article>`).join('')}</div>` : `<div class="empty">No guitar shape for ${m.chord.symbol} has ${name} as its top note. Try another chord or note.</div>`}
-   <p class="hint">Keeping shapes into a line is piano-only for now.</p>`;
+  return `<div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${name} on top</h3><span class="small">${LGR.length} shape${LGR.length === 1 ? '' : 's'} on guitar, ${prevG ? 'smoothest from the last one you kept first' : 'easiest first'}. The melody note is the highest string you play.</span></div>
+   ${LGR.length ? `<div class="cards extcards">${LGR.map((g, i) => `<article class="card r1"><div class="ch"><span class="cs">${g.name}</span><span class="cn">${g.sub}</span></div>${chordBox(g, m.chord.symbol)}<div class="small">frets ${gripText(g)} · notes ${gripNames(g)}</div><div class="small">${g.why}</div><div class="btns"><button class="hear" data-a="lgrip" data-i="${i}">▶ Hear it</button><button class="hear" data-a="lgkeep" data-i="${i}">Keep this one</button></div></article>`).join('')}</div>` : `<div class="empty">No guitar shape for ${m.chord.symbol} has ${name} as its top note. Try another chord or note.</div>`}
+   <p class="hint">Keep a shape to start a line; the next chord's shapes are then ordered by how little your hand moves.</p>`;
 }
 function dynHTML(): string {
   const m = model(), n = m.ranked.length;
@@ -98,7 +110,7 @@ function dynHTML(): string {
    ${S.inst === 'guitar' ? guitarLead(m) : ''}
    <div class="waysh"${S.inst === 'guitar' ? ' hidden' : ''}><h3 style="margin:0">${m.chord.symbol} with ${melName(m)} on top</h3><span class="small">${n} voicing${n === 1 ? '' : 's'}${m.prev ? `, smoothest from ${m.prev.sym} first` : `, ${GENRES[S.pgenre].label} favorites first`}. Gold = melody${n ? ', blue = left hand' : ''}.</span></div>
    ${S.inst === 'guitar' ? '' : n ? `<div class="cards extcards">${m.ranked.map((r, i) => voicingCard(r, i, m)).join('')}</div>` : `<div class="empty">No voicing puts ${melName(m)} on top of ${m.chord.symbol}: the note has a different 3rd or 7th than the chord. Try a fix above, another note or another chord.</div>`}
-   ${S.inst === 'guitar' ? '' : keptHTML()}`;
+   ${keptHTML()}`;
 }
 
 /** Redraw what changes with the melody, without rebuilding the piano (a key may be held down). */
@@ -108,7 +120,11 @@ export function drawLead(): void {
   if (e) e.innerHTML = dynHTML();
   drawMidi(); drawKeys();
 }
+/** The kept line as one list of timed chords (so one Stop cancels all of it). */
+export const keptEvents = (list: KeptVoicing[], inst: 'piano' | 'guitar') => list.map((k, i) => ({ t: i * 1.5, dur: 1.4, tones: [] as never[], midis: [...k.notes.map(n => n.m)].sort((a, b) => a - b), ...(inst === 'guitar' ? { strum: 0.022, inst: 'guitar' as const } : {}) }));
+const last = <T,>(a: T[]): T | undefined => a[a.length - 1];
 const play = (ns: number[]): void => playNotes([...ns].sort((a, b) => a - b));
+const playKept = (k: { notes: { m: number }[] }): void => { if (S.inst === 'guitar') playGrip(k.notes.map(n => n.m)); else play(k.notes.map(n => n.m)); };
 /** Clicks on the Melody tab. Returns 'draw' for a light redraw, 'render' for a full one, null when not handled. */
 export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'none' | null {
   const m = () => model();
@@ -124,18 +140,25 @@ export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'non
     case 'lkeep': {
       const mm = m(), v = mm.ranked[+d.i!]?.voicing;
       if (!v) return 'none';
-      S.lkept.push({ sym: v.sounds && v.type === 'upper' ? v.sounds : mm.chord.symbol, name: v.name, notes: v.notes.map(n => ({ m: n.midi, n: noteName(n.note), lab: n.label, h: n.hand })) });
+      keptPush({ sym: v.sounds && v.type === 'upper' ? v.sounds : mm.chord.symbol, name: v.name, notes: v.notes.map(n => ({ m: n.midi, n: noteName(n.note), lab: n.label, h: n.hand })) });
       play(v.notes.map(n => n.midi));
       return 'draw';
     }
-    case 'lkhear': { const k = S.lkept[+d.i!]; if (k) play(k.notes.map(n => n.m)); return 'none'; }
+    case 'lgkeep': {
+      const g = LGR[+d.i!], mm = m();
+      if (!g) return 'none';
+      keptPush({ sym: mm.chord.symbol, name: g.name + ' · ' + g.sub, notes: g.notes.map((n, i) => ({ m: n.midi, n: noteName(n.note), lab: n.label, h: i === g.notes.length - 1 ? 'R' : 'L' })), grip: g });
+      playGrip(g.notes.map(n => n.midi));
+      return 'draw';
+    }
+    case 'lkhear': { const k = keptList()[+d.i!]; if (k) playKept(k); return 'none'; }
     case 'lkall': {
-      stopAll();
-      S.lkept.forEach((k, i) => setTimeout(() => { if (S.tab === 'lead') play(k.notes.map(n => n.m)); }, i * 1500));
+      /* one scheduled sequence, so Stop cancels the whole line (no timers left behind) */
+      playSeq(keptEvents(keptList(), S.inst), 'x');
       return 'none';
     }
-    case 'lundo': S.lkept.pop(); return 'draw';
-    case 'lkclear': S.lkept = []; return 'draw';
+    case 'lundo': keptPop(); return 'draw';
+    case 'lkclear': keptClear(); return 'draw';
     case 'lfix': {
       const f = m().check.fixes[+d.i!];
       if (!f) return 'none';
