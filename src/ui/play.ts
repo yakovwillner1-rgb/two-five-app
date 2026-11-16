@@ -6,7 +6,8 @@ import { S, curMode, curTitle } from '../state';
 import { fmt, mod, note, pcOf } from '../theory/notes';
 import { PlaySession, buildSteps, voicingStep, type Step } from '../theory/playcheck';
 import { burstAt, confetti, countUp, reduced, ripple } from './motion';
-import { chordBox, eventBox } from './fretboard';
+import { chordBox, eventBox, inputNeck, midiName, positionsOf, positionsOfPc, type GhostDot, type HeldDot } from './fretboard';
+import { assignFingers, fromChord, gripsFor, styleForGenre } from '../theory/guitar';
 import { cref, soundBox } from './pieces';
 import { ROLE_VAR, roleOfSymbol } from './role';
 import type { Flavor } from '../theory/types';
@@ -21,6 +22,8 @@ export const heldHook = { changed: (_held: Set<number>): void => {} };
 export const leadHook = { changed: (_held: Set<number>): void => {}, ghost: (): Record<number, string> => ({}) };
 /** Let go of every held note (latched on-screen keys). */
 export function releaseAll(): void { [...held].forEach(noteOff); }
+/** Where on the guitar neck each held note was tapped (a MIDI keyboard gives no position, so a sensible one is chosen). */
+const heldPos = new Map<number, { s: number; f: number }>();
 let ses: PlaySession | null = null, sig = '', t0 = 0, elapsed = 0;
 /* combo / accuracy of this run: a unit is one chord (or one scale note); it is clean when no wrong note came in it */
 let combo = 0, bestCombo = 0, units = 0, cleanUnits = 0, unitKey = '', unitWrong = 0, scoreShown = false, comboBump = false;
@@ -46,7 +49,7 @@ export function resetPL(): void {
   clearTimeout(chkT);
   sig = playSig(); t0 = 0; elapsed = 0;
   combo = bestCombo = units = cleanUnits = 0; unitKey = ''; unitWrong = 0; scoreShown = false; comboBump = false;
-  ses = new PlaySession(steps(), S.pstrict, held, S.px === 'random' ? steps : undefined);
+  ses = new PlaySession(steps(), S.pstrict && S.inst !== 'guitar', held, S.px === 'random' ? steps : undefined);
 }
 
 export function noteOn(n: number, src: 'screen' | 'midi'): void {
@@ -65,6 +68,7 @@ export function noteOn(n: number, src: 'screen' | 'midi'): void {
   keyRipple(n, r.mark === 'bad' ? 'bad' : r.mark === 'ok' ? 'ok' : 'on');
 }
 export function noteOff(n: number): void {
+  heldPos.delete(n);
   if (screenOn.has(n)) { screenOn.delete(n); const o = getOut(); if (o) sendOff(o, n); }
   if (ses) ses.noteOff(n);
   held.delete(n);
@@ -138,7 +142,35 @@ function targetHTML(): string {
     <div class="eyebrow" style="margin-top:14px">${st.label}${S.px === 'random' ? ' · round ' + (P.rounds + 1) : ''}</div>
     <div class="pbig" data-chord="${cref(c)}">${c.symbol}</div><p class="phow">${how}</p>${pstats()}`;
 }
+/** Guitar: the neck instead of the piano. Hints are a good grip with finger numbers; held notes show where you played them. */
+function guitarKeys(): string {
+  const P = S.tab === 'play' ? ses : null, st = !P || P.done ? null : P.steps[P.i], ghosts: GhostDot[] = [];
+  const near = (midis: number[]) => {
+    let prev = 5;
+    return midis.flatMap(m => { const ps = positionsOf(m); if (!ps.length) return []; const p = ps.reduce((a, b) => (Math.abs(b.f - prev) < Math.abs(a.f - prev) ? b : a)); prev = p.f; return [p]; });
+  };
+  if (S.phint && st && P) {
+    if (st.kind === 'scale') { const pc = st.seq[P.si]; if (pc != null) positionsOfPc(pc).filter(p => p.f <= 12).forEach(p => ghosts.push({ s: p.s, f: p.f, label: midiName(pc) })); }
+    else if (st.kind === 'voicing') {
+      const ev = S.px === 'study' && S.practiceStudy?.instrument === 'guitar' ? S.practiceStudy.events[P.i] : null;
+      if (ev?.frets) { const fg = assignFingers(ev.frets); ev.frets.forEach((f, s) => { if (f != null) ghosts.push({ s, f, label: f === 0 ? '○' : String(fg.fingers[s] ?? '') }); }); }
+      else near(st.midis).forEach((p, i) => ghosts.push({ s: p.s, f: p.f, label: midiName(st.midis[i]) }));
+    } else {
+      const g = gripsFor(fromChord(st.chord), styleForGenre(S.pgenre))[0];
+      if (g) g.notes.forEach(n => ghosts.push({ s: n.string, f: n.fret, label: n.fret === 0 ? '○' : String(g.fingers[n.string] ?? '') }));
+    }
+  }
+  if (S.tab === 'lead') Object.keys(leadHook.ghost()).forEach(k => { const m = +k, ps = positionsOf(m).length ? positionsOf(m) : positionsOf(m + (m < 64 ? 12 : -12)); ps.forEach(p => ghosts.push({ s: p.s, f: p.f, label: midiName(m) })); });
+  const dots: HeldDot[] = [];
+  held.forEach(m => {
+    const hint = ghosts.find(g => positionsOf(m).some(p => p.s === g.s && p.f === g.f));
+    const pos = heldPos.get(m) ?? (hint ? { s: hint.s, f: hint.f } : positionsOf(m).sort((a, b) => a.f - b.f)[0]);
+    if (pos) dots.push({ s: pos.s, f: pos.f, mark: (P?.marks[m] as 'ok' | 'bad' | undefined) || 'on', name: midiName(m) });
+  });
+  return inputNeck(dots, ghosts.filter(g => !dots.some(d => d.s === g.s && d.f === g.f)));
+}
 function pianoSVG(): string {
+  if (S.inst === 'guitar') return guitarKeys();
   const P = S.tab === 'play' ? ses : null, lo = innerWidth < 900 ? 48 : 36, hi = 84, W = 30, H = 150, BW = 18, BH = 94, wh = [0, 2, 4, 5, 7, 9, 11];
   const st = !P || P.done ? null : P.steps[P.i], ghost: Record<number, string> = {};
   if (S.phint && st && P) {
@@ -213,6 +245,7 @@ export function bindPiano(): void {
     if (!r) return;
     e.preventDefault();
     const n = +r.dataset.n!;
+    if (r.dataset.s) heldPos.set(n, { s: +r.dataset.s, f: +r.dataset.f! });
     /* latch (Listen): a tap toggles the key, so a chord can be built with a mouse */
     if (S.tab === 'listen' && S.llatch) { if (held.has(n)) noteOff(n); else noteOn(n, 'screen'); return; }
     ptrNote[e.pointerId] = n;
@@ -230,12 +263,12 @@ export function viewPlay(): string {
    <div style="text-align:center"><div class="eyebrow">Play it · ${S.px === 'mode' ? 'Modes' : curTitle()}</div><h2>Play it and get <em>checked</em></h2></div>
    <div class="panel pctl">
      <div class="pcrow"><span class="lbl">Practice</span><div class="seg" role="group" aria-label="What to practice">${([['study', 'This route'], ['move', 'The move'], ['prog', 'Progression'], ['random', 'Random 2‑5s'], ['mode', 'Mode scale'], ['lead', 'Voicings']] as const).map(([k, l]) => `<button data-a="px" data-v="${k}" ${k === 'study' && !S.practiceStudy ? 'disabled' : ''} aria-pressed="${S.px === k}">${l}</button>`).join('')}</div></div>
-     ${S.px !== 'study' && S.px !== 'mode' && !(S.px === 'lead' && S.lkept.length) ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
+     ${S.inst !== 'guitar' && S.px !== 'study' && S.px !== 'mode' && !(S.px === 'lead' && S.lkept.length) ? `<div class="pcrow"><span class="lbl">Check</span><div class="seg" role="group" aria-label="How strict">${([[0, 'Any voicing'], [1, 'Exact voicing']] as const).map(([k, l]) => `<button data-a="pstrict" data-v="${k}" aria-pressed="${S.pstrict === !!k}">${l}</button>`).join('')}</div></div>` : ''}
      <div class="pcrow sws">${sw('phint', S.phint, 'Show the notes')}${S.px === 'random' ? sw('pall', S.pall, 'All 12 keys') : ''}${S.soundOut ? '' : sw('psound', S.psound, 'Sound for MIDI notes')}</div>
    </div>
    <div class="midibar" id="midibar"></div>
    <div class="panel ptarget" id="ptarget"></div>
    <div class="pkwrap" id="pkwrap"></div>
-   <p class="hint">${src} Green notes fit, red notes don't.${S.phint ? ' Gold dots show what to play.' : ''} Leave "Sound for MIDI notes" off when Logic is playing your keyboard.</p>
+   <p class="hint">${src} Green notes fit, red notes don't.${S.phint ? (S.inst === 'guitar' ? ' Gold dots show what to play; the number is the finger.' : ' Gold dots show what to play.') : ''} Leave "Sound for MIDI notes" off when Logic is playing your keyboard.</p>
   </div>`;
 }

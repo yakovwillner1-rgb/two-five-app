@@ -91,3 +91,13 @@ export function soundBox(): string {
   return `<div class="sndbox"><span class="eyebrow">Sound</span>${midi.acc ? soundSelect() : `<span>Built-in sound</span><button class="linkbtn" data-a="midi">Connect MIDI to play through Logic</button>`}</div>`;
 }
 export function refreshSound(): void { document.querySelectorAll('.sndslot').forEach(e => { e.innerHTML = soundBox(); }); }
+
+/* <details> sections that stay open (or closed) as you left them, even though a click re-draws the page. */
+const OPENED = new Set<string>();
+export const keepOpen = (id: string): string => `data-keep="${id}"${OPENED.has(id) ? ' open' : ''}`;
+export function trackOpen(): void {
+  document.addEventListener('toggle', e => {
+    const d = e.target;
+    if (d instanceof HTMLDetailsElement && d.dataset.keep) { if (d.open) OPENED.add(d.dataset.keep); else OPENED.delete(d.dataset.keep); }
+  }, true);
+}

@@ -19,6 +19,7 @@ export type GuitarStyle = 'jazz' | 'pop';
 export interface GChord { symbol: string; tones: Note[]; labels: string[] }
 
 export interface GuitarNote { string: number; fret: number; midi: number; note: Note; label: string; role: VoiceRole }
+export interface Barre { fret: number; from: number; to: number }
 export interface Grip {
   type: GripType;
   /** short name, e.g. "Drop 2" */
@@ -33,10 +34,14 @@ export interface Grip {
   notes: GuitarNote[];
   /** lowest and highest fretted fret (open strings ignored); 0 when nothing is fretted */
   lo: number; hi: number;
+  /** which finger plays each string (1 = index … 4 = little), null where nothing is fretted */
+  fingers: (number | null)[];
+  /** a barre: one finger flat across several strings on one fret */
+  barre: Barre | null;
   /** how many frets the hand covers: 1 to 5 */
   span: number;
   /** fingers needed (a barre counts as one) */
-  fingers: number;
+  fingerCount: number;
   /** harder than usual: wide stretch */
   stretch: boolean;
   /** lower is easier / better for the style */
@@ -110,6 +115,26 @@ function place(c: GChord, r: Recipe, style: GuitarStyle): Grip[] {
   return out;
 }
 
+/**
+ * Which finger plays what (rule 45). One finger per fret from the lowest fret (in an open chord, from fret 1), so fret f gets finger
+ * f − base + 1. Several notes on the same fret get neighbouring fingers, except on the lowest fret of a moved-up shape, where one
+ * index finger lies flat across them as a barre. This is a sensible default, not the only way: hands differ.
+ */
+export function assignFingers(frets: (number | null)[]): { fingers: (number | null)[]; barre: Barre | null } {
+  const notes = frets.map((f, s) => ({ s, f })).filter((x): x is { s: number; f: number } => x.f != null && x.f > 0);
+  const fingers: (number | null)[] = frets.map(() => null);
+  if (!notes.length) return { fingers, barre: null };
+  const lo = Math.min(...notes.map(n => n.f)), base = frets.some(f => f === 0) && lo <= 3 ? 1 : lo;
+  let next = 1, barre: Barre | null = null;
+  [...new Set(notes.map(n => n.f))].sort((a, b) => a - b).forEach((f, gi) => {
+    const grp = notes.filter(n => n.f === f).sort((a, b) => a.s - b.s);
+    if (gi === 0 && base === lo && grp.length >= 2) { grp.forEach(n => { fingers[n.s] = 1; }); barre = { fret: f, from: grp[0].s, to: grp[grp.length - 1].s }; next = 2; return; }
+    let fin = Math.max(next, f - base + 1);
+    grp.forEach(n => { fingers[n.s] = Math.min(4, fin); fin++; });
+    next = Math.min(4, fin);
+  });
+  return { fingers, barre };
+}
 function fretInfo(frets: (number | null)[]): { lo: number; hi: number; span: number; fingers: number } {
   const f = frets.filter((x): x is number => x != null && x > 0);
   if (!f.length) return { lo: 0, hi: 0, span: 1, fingers: 0 };
@@ -149,7 +174,8 @@ function makeGrip(c: GChord, r: Recipe, frets: (number | null)[], style: GuitarS
     + (r.type === 'open' || r.type === 'barre' ? 0 : openCount * 0.9)
     + info.lo * 0.05
     + extraCost;
-  return { type: r.type, name: r.name, sub: sub || r.sub, why: r.why, frets, notes, lo: info.lo, hi: info.hi, span: info.span, fingers: info.fingers, stretch: info.span >= 5, score };
+  const fg = assignFingers(frets);
+  return { type: r.type, name: r.name, sub: sub || r.sub, why: r.why, frets, notes, lo: info.lo, hi: info.hi, span: info.span, fingers: fg.fingers, barre: fg.barre, fingerCount: info.fingers, stretch: info.span >= 5, score };
 }
 
 /* ---------- recipes ---------- */

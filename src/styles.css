@@ -868,22 +868,40 @@ details.more[open]{display:flex;flex-direction:column;gap:12px}
 .pbox{max-width:150px;margin:0 auto 8px;display:flex;flex-direction:column;align-items:center}
 .lvcol .gbox{max-width:110px}
 /* the neck */
-.gl svg{max-height:210px}
+.mdet,.mgrid>*,.vl{min-width:0}
+.neckscroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.neckscroll svg,.gl-in svg{display:block;width:100%;min-width:640px;height:auto;max-height:none}
+.gl-in svg{min-width:0}
 .gn-board{fill:color-mix(in srgb,var(--gold) 14%,var(--panel2))}
 .gn-fret{stroke:var(--key-stroke);stroke-width:2}
 .gn-str{stroke:var(--muted)}
 .gn-name{font:700 11px var(--body);fill:var(--muted);dominant-baseline:central}
 .gn-num{font:700 12px var(--body);fill:var(--muted);text-anchor:middle}
 .gn-inlay{fill:var(--line)}
+.gn-hit{fill:transparent;cursor:pointer}
+.gn-hit:hover{fill:color-mix(in srgb,var(--accent) 16%,transparent)}
 .gdot{transition:transform var(--vl,.45s) var(--ease-spring),opacity var(--t-fast);will-change:transform}
 .gdot circle{filter:drop-shadow(0 3px 4px rgba(16,40,46,.35))}
-.gdot text{font:800 11px var(--body);fill:var(--on-fill);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.gdot text{font:800 12px var(--body);fill:var(--on-fill);text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .gdot.root circle{fill:var(--gold)}
 .gdot.third circle{fill:var(--accent)}.gdot.third text{fill:var(--on-accent)}
 .gdot.seventh circle{fill:var(--ink)}.gdot.seventh text{fill:var(--bg)}
 .gdot.other circle{fill:var(--c0)}
 .gdot.cue circle{stroke:var(--accent);stroke-width:3.5;stroke-dasharray:3 2}
 .gdot.gone{opacity:0}
+.lbl-finger .t-note,.lbl-note .t-fin{display:none}
+.lblseg{margin-left:auto}.lblseg button{min-height:34px;padding:0 12px;font-size:.84rem}
+.gl-barre{fill:color-mix(in srgb,var(--ink) 22%,transparent)}
+.gsc circle{filter:drop-shadow(0 2px 3px rgba(16,40,46,.3))}
+.gsc text{font:800 10.5px var(--body);fill:var(--on-fill);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.gsc.root circle{fill:var(--gold)}.gsc.char circle{fill:var(--c5)}.gsc.other circle{fill:var(--c2)}
+.gsc.live circle{stroke:var(--accent);stroke-width:4}
+.gghost circle{fill:var(--gold);filter:drop-shadow(0 2px 3px rgba(16,40,46,.3))}
+.gghost text{font:800 12px var(--body);fill:var(--on-fill);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.gghost{animation:ghost 1.4s ease-in-out infinite}
+.ghold circle{filter:drop-shadow(0 0 7px currentColor)}
+.ghold.ok circle{fill:var(--ok-fill);color:var(--ok-fill)}.ghold.bad circle{fill:var(--c5);color:var(--c5)}.ghold.on circle{fill:var(--c0);color:var(--c0)}
+.ghold text{font:800 11px var(--body);fill:var(--on-fill);text-anchor:middle;dominant-baseline:central;pointer-events:none}
 @media (max-width:640px){
   .hdr-in .instseg{order:1}.hdr-in .themebtn{order:2;width:40px;height:40px}
   .instseg button{padding:0 9px;min-height:36px;font-size:.88rem}

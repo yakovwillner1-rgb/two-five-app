@@ -16,6 +16,22 @@ describe('tuning', () => {
   });
 });
 
+describe('fingering', () => {
+  const fing = (sym: string, text: string) => find(sym, text)!.fingers.map(f => f ?? '-').join('');
+  it('open C: ring on A3, middle on D2, index on B1', () => { expect(fing('C', 'x-3-2-0-1-0')).toBe('-32-1-'); });
+  it('open Am: index B1, middle D2, ring G2', () => { expect(fing('Am', 'x-0-2-2-1-0')).toBe('--231-'); });
+  it('open E: index G1, middle A2, ring D2', () => { expect(fing('E', '0-2-2-1-0-0')).toBe('-231--'); });
+  it('open G: middle A2, ring E3, little e3', () => { expect(fing('G', '3-2-0-0-0-3')).toBe('32---4'); });
+  it('open C7: ring A3, little G3', () => { expect(fing('C7', 'x-3-2-3-1-0')).toBe('-3241-'); });
+  it('a drop 2 on one fret uses a barre, then the ring finger up the neck', () => {
+    const g = find('Cmaj7', 'x-x-5-5-5-7')!;
+    expect(g.barre).toEqual({ fret: 5, from: 2, to: 4 }); expect(g.fingers.map(f => f ?? '-').join('')).toBe('--1113');
+  });
+  it('G7 3-x-3-4-3-x: index barre on fret 3, middle on fret 4', () => {
+    const g = find('G7', '3-x-3-4-3-x')!; expect(g.fingers.map(f => f ?? '-').join('')).toBe('1-121-'); expect(g.barre?.fret).toBe(3);
+  });
+});
+
 describe('open and barre chords', () => {
   const root = (r: string) => r;
   it('every open shape spells its chord, root in the bass, nothing outside the chord', () => {
@@ -119,7 +135,8 @@ describe('every grip is playable and correct (12 roots x common chords)', () => 
       expect(list.length, r + k).toBeGreaterThan(0);
       list.forEach(g => {
         expect(g.span, `${r}${k} ${gripText(g)}`).toBeLessThanOrEqual(5);
-        expect(g.fingers).toBeLessThanOrEqual(4);
+        expect(g.fingerCount).toBeLessThanOrEqual(4);
+        g.notes.forEach(n => { if (n.fret > 0) expect(g.fingers[n.string], `${r}${k} ${gripText(g)}`).toBeGreaterThanOrEqual(1); });
         expect(g.frets.every(f => f == null || (f >= 0 && f <= 15))).toBe(true);
         g.notes.forEach((n, i) => {
           expect(n.midi).toBe(TUNING[n.string] + n.fret);

@@ -17,7 +17,13 @@ and what is easy to get wrong.
 - **Plain language:** the rule-generated explanations (techniques, extensions, melody checks, next chords, mode text, Guide, help
   lines) were rewritten for beginners: short sentences, everyday words, terms explained where they first appear. Several tests that
   pinned the old wording were updated; the legacy parity test now only checks the mode *theory*, not the one-line descriptions.
-- Not built on guitar: drop 2&4, alternate tunings, capo, left-handed, finger numbers, guitar *input* (no microphone, by rule).
+- **Whole neck + fingering (branch `feat/guitar-neck`):** every guitar view now draws frets 0–15 (scrolls on a phone, scrolled to the
+  frets in use). Chord boxes and the neck show **finger numbers** (`assignFingers` in guitar.ts: one finger per fret from the lowest fret,
+  a flat-index barre on moved-up shapes; a sensible default, hands differ) with a Fingers / Notes switch on the neck. Guitar replaces the
+  piano everywhere a keyboard was: Move (neck stage), Play it, Listen and Melody (a tappable neck: multi-touch, same note checking;
+  hints are a good grip with finger numbers), Modes (every place the scale's notes are), popovers, Reharm, cards.
+- Sections you open on Move (All routes, Why it works, …) stay open after a click: `keepOpen` / `trackOpen` in pieces.ts.
+- Not built on guitar: drop 2&4, alternate tunings, capo, left-handed. "Exact voicing" is hidden on guitar (it is defined by the piano voicing).
 
 ## Baseline
 - **Live:** https://yakovwillner1-rgb.github.io/two-five-app/ = `main` at the merge of PR #11 (the **v2 design**). Load it twice

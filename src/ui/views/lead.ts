@@ -182,7 +182,7 @@ export function viewLead(): string {
    </div>
    <div class="midibar" id="midibar"></div>
    <div class="pkwrap" id="pkwrap"></div>
-   <p class="hint" style="margin-top:-6px">Tap a key, or play a note on your MIDI keyboard, to set the melody note (the highest note you hold). The gold dot marks it.</p>
+   <p class="hint" style="margin-top:-6px">${S.inst === 'guitar' ? 'Tap a fret, or play a note on your MIDI keyboard,' : 'Tap a key, or play a note on your MIDI keyboard,'} to set the melody note (the highest note you hold). The gold dot marks it.</p>
    <div class="stack" id="ldyn"></div>
   </div>`;
 }

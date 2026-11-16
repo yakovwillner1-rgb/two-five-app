@@ -6,7 +6,7 @@ import { S, load } from './state';
 import { KINDS, type KindId } from './theory/symbols';
 import { initActions } from './ui/actions';
 import { applyTheme, getTheme } from './ui/theme';
-import { refreshSound } from './ui/pieces';
+import { refreshSound, trackOpen } from './ui/pieces';
 import { drawMidi, noteOff, noteOn, resetPL } from './ui/play';
 import { initMotion } from './ui/motion';
 import { initPopover, showPicker, showPop } from './ui/popover';
@@ -17,7 +17,7 @@ midiHooks.noteOff = noteOff;
 midiHooks.changed = () => { drawMidi(); refreshSound(); };
 
 applyTheme(getTheme(), false);
-initMotion();
+initMotion(); trackOpen();
 initPopover();
 initActions();
 

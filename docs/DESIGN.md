@@ -93,6 +93,8 @@ stays in time when the tempo changes. Events come from `playSeq` in `src/audio/p
   Dots: root gold, 3rd/7th mint, others periwinkle (same meaning as the piano legend).
 - **Neck** (`neckStage`): lies down like you hold it (high E on top); one dot per string slides along its string to the next chord
   (`--vl` timing, spring). Root gold, 3rd violet, 7th ink, others periwinkle.
+- **Fingers:** the number in a dot is the finger (1 index … 4 little); a grey bar is a barre; a Fingers / Notes switch on the neck changes the labels.
+- **Whole neck** (`FRETS = 15`) in every guitar view; tappable (`inputNeck`) on Play it, Listen and Melody.
 - The header Piano/Guitar switch is a `.seg`; on phones the header is two rows plus the key row.
 
 ## Not built yet (later steps)
