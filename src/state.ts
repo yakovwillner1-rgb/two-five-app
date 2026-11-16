@@ -5,7 +5,7 @@ import { bestMode, modeInfo, type ModeView } from './theory/modes';
 import type { Family, Flavor, HomeChord, HomeMode, Key, ModeDetail, Note, ScaleType } from './theory/types';
 import type { KindId } from './theory/symbols';
 
-export type Tab = 'move' | 'prog' | 'lead' | 'listen' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
+export type Tab = 'move' | 'prog' | 'lead' | 'reharm' | 'listen' | 'play' | 'quiz' | 'map' | 'modes' | 'ext' | 'chart' | 'guide';
 /**
  * One chord of the progression: a degree of the home key, or a typed symbol. `via` is the passing used
  * to get here from the chord before (its passing chords pick up extensions that connect to `ext`): "techniqueId.variant", or just "secIIV" (= its first variant), or null.
@@ -32,6 +32,8 @@ export interface State {
   ld: number; lsym: string | null; lext: KindId | null; lmel: number; lkept: KeptVoicing[];
   /** Melody tab: degree of the chord that follows (decides the scale), or null when not set */
   lnx: number | null;
+  /* Reharm tab: how often the chords change, and which version is shown */
+  rrhythm: 'auto' | 'bar' | 'half' | 'beat'; rview: 'orig' | 'light' | 'medium' | 'wild';
   /** last typed progression chord that could not be read (not saved) */
   progBad: string | null;
 }
@@ -41,7 +43,7 @@ export const S: State = {
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
   mfam: 'major', mview: 'parallel', mdeg: 1, mroot: null, dmode: 'spell', efam: 'major', ear: null, escore: { r: 0, t: 0 }, voiceHover: true,
   pgenre: 'jazz', pfeel: 'bright', fromSym: null, toSym: null, fromExt: null, toExt: null, way: null, pshowAll: false, progBad: null, lhold: 500, llatch: false,
-  ld: 0, lsym: null, lext: null, lmel: 76, lkept: [], lnx: null,
+  ld: 0, lsym: null, lext: null, lmel: 76, lkept: [], lnx: null, rrhythm: 'auto', rview: 'light',
 };
 
 /* Same storage key as the single-file app, so saved settings carry over. */
@@ -51,7 +53,7 @@ const snap = () => ({
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
   pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way, lhold: S.lhold, llatch: S.llatch,
-  ld: S.ld, lsym: S.lsym, lext: S.lext, lmel: S.lmel, lkept: S.lkept, lnx: S.lnx,
+  ld: S.ld, lsym: S.lsym, lext: S.lext, lmel: S.lmel, lkept: S.lkept, lnx: S.lnx, rrhythm: S.rrhythm, rview: S.rview,
 });
 export function save(): void { try { localStorage.setItem(LSK, JSON.stringify(snap())); } catch (e) { /* storage full or blocked */ } }
 export function load(): Partial<State> { try { return JSON.parse(localStorage.getItem(LSK) || '{}') || {}; } catch (e) { return {}; } }

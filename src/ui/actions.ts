@@ -18,6 +18,7 @@ import { drawLead, leadAction, leadTyped } from './views/lead';
 import { listenAction } from './views/listen';
 import { extPickerHTML, viaPickerHTML } from './views/prog';
 import { newEar, newQ } from './views/quiz';
+import { editSheetHTML, loadFile, reharmAction, reharmTyped } from './views/reharm';
 
 /* Tabs where swiping / arrow keys change the key. */
 const SWIPE: Tab[] = ['move', 'map', 'chart', 'prog', 'modes', 'ext', 'lead'];
@@ -35,6 +36,12 @@ function onClick(e: MouseEvent): void {
   if (S.tab === 'lead' && a) {
     const r = leadAction(a, d);
     if (r === 'render') { stopAll(); render(); } else if (r === 'draw') { drawLead(); save(); }
+    if (r) return;
+  }
+  if (S.tab === 'reharm' && a) {
+    if (a === 'redit') { stopAll(); showSheet(editSheetHTML(+d.i!)); return; }
+    const r = reharmAction(a, d);
+    if (r === true) { stopAll(); render(); }
     if (r) return;
   }
   switch (a) {
@@ -137,8 +144,14 @@ export function initActions(): void {
   document.addEventListener('keydown', onKey);
   document.addEventListener('change', e => {
     const t = e.target as HTMLSelectElement;
+    if (t.classList.contains('rfile')) {
+      const file = (t as unknown as HTMLInputElement).files?.[0];
+      if (file) file.arrayBuffer().then(buf => loadFile(new Uint8Array(buf), file.name)).then(() => { stopAll(); render(); });
+      return;
+    }
     if (t.classList.contains('psym')) {
       const v = (t as unknown as HTMLInputElement).value.trim() || null;
+      if (t.dataset.f === 'rchord') { reharmTyped(+t.dataset.t!, v); stopAll(); render(); return; }
       if (t.dataset.f === 'lead' || t.dataset.f === 'mel') { leadTyped(t.dataset.f, v); stopAll(); render(); return; }
       if (t.dataset.f === 'prog') {
         if (!v) return;

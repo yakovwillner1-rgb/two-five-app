@@ -55,6 +55,19 @@ export function playSeq(events: PlayEvent[], tag: string, done?: () => void): vo
   });
   timers.push(setTimeout(() => { if (tok !== token) return; if (done) done(); else stopAll(); }, end * 1000 + 60));
 }
+/** Notes at exact pitches and times (seconds), e.g. a MIDI file. `marks` light up [data-ev] elements as the music passes them. */
+export function playRaw(notes: { t: number; dur: number; midi: number; vol: number }[], marks: { t: number; id: string }[], tag: string): void {
+  const c = audio(); stopAll(); S.playing = tag; syncPlay();
+  const tok = token, t0 = c.currentTime + 0.08;
+  let end = 0;
+  notes.forEach(n => { tone(n.midi, t0 + n.t, n.dur, n.vol); end = Math.max(end, n.t + n.dur); });
+  marks.forEach(m => timers.push(setTimeout(() => {
+    if (tok !== token) return;
+    clearLive();
+    document.querySelectorAll('[data-ev="' + m.id + '"]').forEach(e => e.classList.add('live'));
+  }, m.t * 1000 + 80)));
+  timers.push(setTimeout(() => { if (tok === token) stopAll(); }, end * 1000 + 120));
+}
 export const beat = (): number => 60 / S.tempo;
 
 /** Filled in by the Move and Progression views: what the big play button plays. */

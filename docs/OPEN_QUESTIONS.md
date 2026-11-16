@@ -143,3 +143,28 @@ Still open from Phase 2:
     voicing under a melody yet. Tune the lists?
 58. **13♯11 in four notes:** a close voicing has room for one note in the 5th's place, so C13♯11
     keeps the ♯11 and drops the 13 unless the 13 is the melody. Use five notes there instead?
+
+## From Phase 3 (Reharm from MIDI, scores and lead sheets)
+59. **Key profiles:** the Krumhansl–Kessler numbers are written from memory (THEORY_SOURCES rule 31).
+    They pass the tests (C major, F major, A minor tunes). Check them against the book?
+60. **PDF and photos of sheet music are not read.** Reading notes from a picture needs optical music
+    recognition, which cannot be done reliably offline in a static site without an AI call (hard
+    rules 4 and 6). The app reads MusicXML (Logic, MuseScore, Sibelius, Dorico and Finale export it)
+    and typed chord charts instead. If you want PDF support, the realistic route is a separate
+    tool that turns the PDF into MusicXML first.
+61. **Chord detection weights** (rule 33) are my guesses. Send a real Logic export where it reads
+    the chords wrong and I will tune them against it.
+62. **Reharm levels** (rule 35): light = one calm chord on the last beat of a long chord; medium =
+    up to two chords; wild = tense ways first. Only passing chords are added; original chords are
+    never replaced (no tritone sub *of* a written V, no dropping a chord). Add substitution?
+63. **The melody decides, strictly:** a melody note held a quarter of a beat or longer must fit the
+    new chord. Shorter notes are ignored. Looser or stricter?
+64. **Chord track in the download** holds each chord for its full length (block chords), with a low
+    root added when the voicing has none. Want a rhythm (comping pattern) or no added bass?
+65. **Swing, triplets and tempo changes** are kept as they are in the file; chords are read on the
+    bar grid of the time signature. A recording made without a click will not line up with bars.
+66. **Scores with repeats, codas and several voices on one staff** are read straight through as
+    written (repeats are not unfolded; voices on one staff are merged).
+67. **Typed charts** have no melody; the app picks the top note of each voicing. Should a melody be
+    typable too (note names per bar)?
+68. **12 tabs:** the phone tab bar now scrolls sideways. Group the tabs instead?
