@@ -11,7 +11,9 @@ import type { Chord, HomeChord } from '../../theory/types';
 import { extensionOptions, scaleChoices } from '../../theory/tensions';
 import { optionChip, scaleChips, tensionLine } from '../extensions';
 import { chordKeys, esc, extChoices, findWay, pickChord, playTones, rankedWays, wayButton, wayKey, withExt } from '../passing';
-import { listeningCue, pitchName, resolveStudy, studyEvents, studyLength, type Study } from '../../study/model';
+import { listeningCue, pitchName, resolveGuitarStudy, resolveStudy, studyEvents, studyLength, type Study } from '../../study/model';
+import { gripsFor, styleForGenre } from '../../theory/guitar';
+import { chordBox, neckStage } from '../fretboard';
 import { playedStage } from '../keyboards';
 import { cache, card, cref, tilesHTML } from '../pieces';
 
@@ -41,8 +43,8 @@ export function moveSeq(m: MoveModel): { chords: PChord[]; ids: string[]; beats:
 }
 /** The current route as resolved musical material: what is shown, played, compared and practised. */
 export function moveStudy(m: MoveModel = moveModel()): Study {
-  const q = moveSeq(m);
-  return resolveStudy(q.chords, m.sel?.name ?? 'Route', curTitle(), q.beats);
+  const q = moveSeq(m), title = m.sel?.name ?? 'Route';
+  return S.inst === 'guitar' ? resolveGuitarStudy(q.chords, title, curTitle(), q.beats, styleForGenre(S.pgenre)) : resolveStudy(q.chords, title, curTitle(), q.beats);
 }
 playSources.move = (): PlayEvent[] => {
   const m = moveModel(), q = moveSeq(m);
@@ -57,12 +59,17 @@ function chartOf(m: MoveModel, j: number): Chord | null {
   const c = chordInfo(m.to.root, source, s.chords.length === 2 ? (j === 0 ? 1 : 4) : 4);
   return c.symbol === s.chords[j].symbol ? c : null;
 }
+/** A guitar chord box for a chord (a reference shape: the best single grip, not the route's voice-led one). */
+function refBox(c: PChord): string {
+  const g = gripsFor(c, styleForGenre(S.pgenre))[0];
+  return g ? `<div class="refbox"><div class="lbl">Example shape · ${g.name}, ${g.sub}</div>${chordBox(g, c.symbol)}</div>` : '';
+}
 function detail(c: PChord, cls: string, top: string, id: string, chart: Chord | null): string {
   cache.chords[id] = { tones: playTones(c) };
   if (chart) return card(chart, cls, top, id);
   return `<article class="card ${cls}"><div class="ch"><span class="cs">${c.symbol}</span><span class="cn">${top}</span></div>
     <div><div class="lbl">Chord tones</div><div class="notes">${c.tones.map((n, i) => `<span class="nw"><span class="n ct">${fmt(n)}</span><small>${c.labels[i]}</small></span>`).join('')}</div></div>
-    ${chordKeys(c)}
+    ${S.inst === 'guitar' ? refBox(c) : chordKeys(c)}
     ${c.upper ? `<div class="small">${fmt(c.upper.root)} major triad on top of the ${fmt(c.root)}7 shell.</div>` : ''}
     <div class="btns"><button class="hear" data-a="one" data-id="${id}">▶ Hear ${c.symbol}</button></div></article>`;
 }
@@ -91,11 +98,11 @@ export function viewMove(): string {
   const study = moveStudy(m), q = moveSeq(m), cue = listeningCue(study);
   const pitches = (ei: number) => study.events[ei].midis.map((_x, i) => {
     const hot = !!cue && ((ei === cue.fromIndex && study.events[ei].midis[i] === cue.fromMidi) || (ei === cue.toIndex && study.events[ei].midis[i] === cue.toMidi));
-    return `<span class="pt${hot ? ' focus' : ''}">${pitchName(study.events[ei], i)}</span>`;
+    return `<span class="pt${hot ? ' focus' : ''}">${study.instrument === 'guitar' ? study.events[ei].names[i] : pitchName(study.events[ei], i)}</span>`;
   }).join('');
   const blk = (c: PChord, cl: string, id: string, top: string, note: string, ref?: string, side?: 'from' | 'to') => {
     const ei = q.ids.indexOf(id);
-    return `<div class="blk ${cl}" data-ev="${id}" data-flip="h:${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bth"><div class="bt">${top}</div>${side ? `<button class="blkchg" data-a="pickside" data-v="${side}" aria-expanded="${S.pickSide === side}" aria-label="Change the ${side === 'from' ? 'start' : 'landing'} chord">${S.pickSide === side ? 'done' : 'change'} ▾</button>` : ''}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div><div class="bp" aria-label="Notes played">${pitches(ei)}</div></div>`;
+    return `<div class="blk ${cl}" data-ev="${id}" data-flip="h:${id}"${ref ? ` data-chord="${ref}"` : ''}><div class="bth"><div class="bt">${top}</div>${side ? `<button class="blkchg" data-a="pickside" data-v="${side}" aria-expanded="${S.pickSide === side}" aria-label="Change the ${side === 'from' ? 'start' : 'landing'} chord">${S.pickSide === side ? 'done' : 'change'} ▾</button>` : ''}</div><div class="bs">${c.symbol}</div><div class="bn">${note}</div><div class="bp" aria-label="Notes played">${pitches(ei)}</div>${study.instrument === 'guitar' ? `<div class="bp gtxt" aria-label="Frets, low string to high">frets ${study.events[ei].frets!.map(f => (f == null ? '×' : f)).join(' ')}</div>` : ''}</div>`;
   };
   const fromRef = chartFrom ? cref(chartFrom) : undefined, toRef = chartTo ? cref(chartTo) : undefined;
   const path = [
@@ -109,7 +116,7 @@ export function viewMove(): string {
   ].join('');
   cache.chords.mf = { tones: playTones(m.from) };
   /* each chord of the path: its scale, its tensions, and extended versions that lead into the next chord */
-  const ext = `<div class="panel"><h3>Scales and other extensions</h3><p class="small" style="margin:0 0 10px">Each chord's scale decides which extensions fit. Tap an extended chord to hear it go into the next chord. The lines under it say where each added note moves.</p>
+  const ext = `<div class="panel"><h3>Scales and other extensions</h3><p class="small" style="margin:0 0 10px">Each chord has a scale, and the scale decides which extra notes fit. Tap a chord with extra notes to hear it go into the next chord. The lines under it say where each added note goes.</p>
     <div class="extrows">${seq.map((c, i) => {
       const next = i < seq.length - 1 ? seq[i + 1] : null, ch = scaleChoices(c, next, key)[0], opts = extensionOptions(c, next, key);
       return `<div class="extrow ${cls[i]}"><div class="exth"><span class="cs2">${c.symbol}</span>${next ? `<span class="arr">→</span><span class="small">${next.symbol}</span>` : '<span class="small">landing chord</span>'}<span class="cn">${ch.scale.name}</span></div>
@@ -118,14 +125,14 @@ export function viewMove(): string {
     }).join('')}</div>
     <p class="small" style="margin:10px 0 0">Rules and sources: see <button class="linkbtn" data-a="tab" data-v="ext">Extensions</button> under Reference.</p></div>`;
   /* bullets come as: what it is, [voice leading], borrowed notes, why it pulls */
-  const labels = s && s.explanation.length === 4 ? ['What it is', 'Voice leading', 'Borrowed notes', 'Why it pulls'] : ['What it is', 'Borrowed notes', 'Why it pulls'];
+  const labels = s && s.explanation.length === 4 ? ['What it is', 'How the notes move', 'Notes from outside the key', 'Why it pulls'] : ['What it is', 'Notes from outside the key', 'Why it pulls'];
   const why = s ? s.explanation.map((l, i) => `<p><span class="whyl">${labels[i]}</span>${l.replace(/^Voice leading: /, '')}</p>`).join('')
     + (s.ext?.lines.length ? `<p><span class="whyl">Extensions</span>${s.ext.lines.join('<br>')}</p>` : '') : '';
   const extOn = !!s?.ext;
   /* choose: a tray under the path with the chords of the key as big tiles; typing and extensions are one step further */
   const side = S.pickSide, tray = side ? `<div class="tray" data-flip="tray"><div class="trayh"><span class="lbl">${side === 'from' ? 'Start on' : 'Land on'}</span><button class="vx" data-a="pickside" data-v="${side}" aria-label="Close">×</button></div>
     ${side === 'from' ? tilesHTML(m.H, S.fromSym && !m.badFrom ? -1 : S.from, 'from', 'r0', true) : tilesHTML(m.H, S.toSym && !m.badTo ? -1 : S.to, 'to', 'r1', true)}
-    <details class="more"${(side === 'from' ? S.fromSym || S.fromExt : S.toSym || S.toExt) ? ' open' : ''}><summary>Type a chord or add an extension</summary>${side === 'from' ? input('from', S.fromSym, m.badFrom) + extRow('from', m.fromChoices, m.from) : input('to', S.toSym, m.badTo) + extRow('to', m.toChoices, m.to)}${extOn ? '<p class="small">The passing chords took extensions that connect to yours; routes are re-ranked by how smoothly your added notes carry through (the “connection” tag).</p>' : ''}</details></div>` : '';
+    <details class="more"${(side === 'from' ? S.fromSym || S.fromExt : S.toSym || S.toExt) ? ' open' : ''}><summary>Type a chord or add an extension</summary>${side === 'from' ? input('from', S.fromSym, m.badFrom) + extRow('from', m.fromChoices, m.from) : input('to', S.toSym, m.badTo) + extRow('to', m.toChoices, m.to)}${extOn ? '<p class="small">The passing chords changed their extra notes to fit yours. Routes are re-ordered by how smoothly your added notes carry through (the “connection” tag).</p>' : ''}</details></div>` : '';
   const startPill = !showFrom ? `<button class="pill sm startpill" data-a="pickside" data-v="from">Start: ${m.from.symbol} · change ▾</button>` : '';
   /* understand: one cue from the notes actually played */
   const cueHTML = cue ? `<div class="cue" data-flip="cue"><span class="lbl">Listen for this</span><p>${cue.text}</p><button class="pill sm" data-a="study-focus">▶ Hear just this line</button></div>` : '';
@@ -138,14 +145,14 @@ export function viewMove(): string {
   const nowB = moveStudy(m), beatsOf = (st: Study) => studyLength(st);
   const chain = (st: Study) => st.events.map(e => e.symbol).join(' → ');
   const A = S.studyA;
-  const compare = A ? `<div class="compare" data-flip="compare"><div class="cmp" data-ev="study-a-mark"><span class="ab">A · saved</span><b>${chain(A)}</b><small>${A.title} · ${A.key} · ${beatsOf(A)} beats</small><button class="pill sm" data-a="study-a">▶ Hear A</button></div>
-    <div class="cmp now" data-ev="study-b-mark"><span class="ab">B · current</span><b>${chain(nowB)}</b><small>${nowB.title} · ${nowB.key} · ${beatsOf(nowB)} beats</small><button class="pill sm" data-a="play">▶ Hear B</button></div>
+  const compare = A ? `<div class="compare" data-flip="compare"><div class="cmp" data-ev="study-a-mark"><span class="ab">A · saved</span><b>${chain(A)}</b><small>${A.title} · ${A.key} · ${A.instrument === 'guitar' ? 'guitar' : 'piano'} · ${beatsOf(A)} beats</small><button class="pill sm" data-a="study-a">▶ Hear A</button></div>
+    <div class="cmp now" data-ev="study-b-mark"><span class="ab">B · current</span><b>${chain(nowB)}</b><small>${nowB.title} · ${nowB.key} · ${nowB.instrument === 'guitar' ? 'guitar' : 'piano'} · ${beatsOf(nowB)} beats</small><button class="pill sm" data-a="play">▶ Hear B</button></div>
     <div class="cmpact"><button class="pill go" data-a="study-ab">▶ A, then B</button><button class="pill sm" data-a="study-clear">Clear A</button></div>
     <p class="hint">B is whatever is selected above. Both play at ${S.tempo} bpm with the notes shown.</p></div>` : '';
   const fold = (title: string, body: string, open = false) => `<details class="panel fold"${open ? ' open' : ''}><summary>${title}</summary><div class="foldbody">${body}</div></details>`;
   return `<div class="stack connect">${tip}
    <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2 class="sr">Get from ${m.from.symbol} to ${m.to.symbol}</h2></div>
-   <section class="stage">${startPill}<div class="pathx">${path}</div>${tray}${cueHTML}${playedStage(study, q.ids, cls, cue)}</section>
+   <section class="stage">${startPill}<div class="pathx">${path}</div>${tray}${cueHTML}${study.instrument === 'guitar' ? neckStage(study, q.ids, cls, cue) : playedStage(study, q.ids, cls, cue)}</section>
    <section class="panel routes"><div class="waysh"><h3>Other routes</h3><span class="small">Best for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()}. Tap one to try it.</span></div>
      <div class="ways" data-flip-list>${topHTML || '<div class="empty">No routes for this pair in this style. Try another style or target.</div>'}</div>
      <details class="more"><summary>All ${m.shown.length} routes, style and feel</summary>
@@ -155,7 +162,7 @@ export function viewMove(): string {
    <section class="applybar"><button class="pill" data-a="study-save">${A ? 'Replace A with this' : 'Save as A to compare'}</button><button class="pill go" data-a="study-practice">Practice this →</button></section>
    ${compare}
    ${s ? fold(`Why it works · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}`, `<div class="why"><p class="small">What the technique does in general. The notes actually played are in the keyboard above.</p>${why}</div>`) : ''}
-   ${s ? fold('Guide tones by name (reference)', `<p class="small" style="margin:0">The 3rds and 7ths of each chord as note names, nearest-note view. Hum these and you hear the whole move. They are not octave-exact; the keyboard above shows what is played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
+   ${s ? fold('The 3rds and 7ths by name (reference)', `<p class="small" style="margin:0">The 3rd and 7th of each chord, by note name. Hum them one after the other and you hear the whole move. This is a simple guide: the keyboard above shows the exact notes played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
    ${fold('Scales and extensions', ext)}
    ${fold('Chord details and example voicings (reference)', `<div class="cards">${cards}</div>`)}
   </div>`;

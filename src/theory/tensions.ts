@@ -36,7 +36,7 @@ export const SCALES: Record<ScaleId, ScaleDef> = {
   ionian: { name: 'Ionian', parent: 'major scale', kind: 'maj7', ivs: [M2, M3, P4, P5, M6, M7], avoid: ['11'], options: ['maj9', '6/9', '6'] },
   lydian: { name: 'Lydian', parent: '4th mode of major', kind: 'maj7', ivs: [M2, M3, A4, P5, M6, M7], avoid: [], options: ['maj7♯11', 'maj9', '6/9'] },
   dorian: { name: 'Dorian', parent: '2nd mode of major', kind: 'm7', ivs: [M2, m3, P4, P5, M6, m7], avoid: [],
-    caution: { '13': 'Books disagree: Berklee texts and Terefenko treat the 13 on a ii chord as an avoid note (with the ♭3 it forms the tritone of the V7 and gives the V away early); Levine and others use it freely.' }, options: ['m9', 'm11', 'm6'] },
+    caution: { '13': 'Teachers disagree. Some (Berklee, Terefenko) say avoid the 13 on a ii chord, because with the ♭3 it hints at the V chord too early. Others (Levine) use it freely.' }, options: ['m9', 'm11', 'm6'] },
   phrygian: { name: 'Phrygian', parent: '3rd mode of major', kind: 'm7', ivs: [m2, m3, P4, P5, m6, m7], avoid: ['♭9', '♭13'], options: ['m7add11'] },
   aeolian: { name: 'Aeolian', parent: '6th mode of major (natural minor)', kind: 'm7', ivs: [M2, m3, P4, P5, m6, m7], avoid: ['♭13'], options: ['m9', 'm11'] },
   melodicMinor: { name: 'Melodic minor', parent: 'melodic minor scale', kind: 'm(maj7)', ivs: [M2, m3, P4, P5, M6, M7], avoid: [], options: ['m6', 'm(maj7)'] },
@@ -83,43 +83,43 @@ const semis = (a: Note, b: Note): number => mod(pcOf(b) - pcOf(a), 12);
 export function scaleChoices(c: PChord, next: PChord | null, key: Key): ScaleChoice[] {
   const fam = famOfKind(c), r = c.root, mk = (id: ScaleId, why: string): ScaleChoice => ({ scale: chordScale(id, r), why });
   const deg = semis(key.tonic, r);
-  if (c.kind === '7sus4' || c.kind === '9sus4' || c.kind === 'sus4') return [mk('mixolydianSus', 'A sus chord: the 4th replaces the 3rd, so the 3rd is the note to stay off.')];
+  if (c.kind === '7sus4' || c.kind === '9sus4' || c.kind === 'sus4') return [mk('mixolydianSus', 'A sus chord has the 4th instead of the 3rd. Stay off the 3rd.')];
   if (fam === 'dom') {
     const step = next ? semis(r, next.root) : -1, toMinor = !!next && ['min', 'hdim'].includes(famOfKind(next));
     if (step === 5 && toMinor) return [
-      mk('phrygianDominant', `It resolves down a fifth to a minor chord: ♭9 and ♭13 are notes of ${fmt(next!.root)} harmonic minor.`),
-      mk('altered', 'Every tension altered (♭9 ♯9 ♯11 ♭13): the strongest pull into the next chord.'),
+      mk('phrygianDominant', `It goes down a fifth to a minor chord, so ♭9 and ♭13 fit (they are notes of ${fmt(next!.root)} harmonic minor).`),
+      mk('altered', 'Every extra note is altered (♭9 ♯9 ♯11 ♭13). This gives the strongest pull into the next chord.'),
       mk('mixolydianb13', 'Berklee\'s choice for V7 of ii: natural 9 with ♭13.'),
     ];
     if (step === 5) return [
-      mk('mixolydian', 'It resolves down a fifth to a major-type chord: the natural 9 and 13 belong to that key.'),
-      mk('altered', 'Every tension altered (♭9 ♯9 ♯11 ♭13): more pull into the next chord.'),
-      mk('halfWhole', '♭9 and ♯9 with a natural 13: the diminished-scale dominant.'),
+      mk('mixolydian', 'It goes down a fifth to a major chord, so the plain 9 and 13 belong to that key.'),
+      mk('altered', 'Every extra note is altered (♭9 ♯9 ♯11 ♭13). This gives even more pull into the next chord.'),
+      mk('halfWhole', '♭9 and ♯9 with a natural 13: the "half-whole" scale, a tense dominant sound.'),
     ];
     return [
-      mk('lydianDominant', next && step === 11 ? 'It resolves down a half step (a tritone sub): the ♯11 is the root of the dominant it replaces.' : 'It does not resolve down a fifth, so Lydian dominant is one color option; compare it with the melody and actual voice leading.'),
+      mk('lydianDominant', next && step === 11 ? 'It moves down one half step (a tritone sub): the ♯11 is the root of the chord it replaces.' : 'It does not go down a fifth, so Lydian dominant (with the ♯11) is just one color to try. Check it against the melody.'),
       mk('mixolydian', 'The plain dominant scale.'),
     ];
   }
   if (fam === 'maj') {
     const home = deg === 0 && key.mode === 'major' || deg === 3 && key.mode === 'minor';
-    const io = mk('ionian', home ? 'Ionian is a starting palette for this major chord.' : 'The plain major scale on this root.');
-    const ly = mk('lydian', home ? 'The ♯11 removes the avoid-note 4th: a modern color for a home chord.' : 'Lydian is a major-chord color option. It is diatonic on IV in a major key; other roots may introduce notes outside the home key.');
+    const io = mk('ionian', home ? 'Ionian is the plain major scale: a good place to start for this chord.' : 'The plain major scale on this root.');
+    const ly = mk('lydian', home ? 'The ♯11 replaces the 4th, which can clash with the 3rd. A modern, floating sound for a home chord.' : 'Lydian is a color option for major chords. It uses only notes of the key on the IV chord. On other chords it adds a note outside the key.');
     return home ? [io, ly] : [ly, io];
   }
   if (fam === 'aug') return [mk('lydianAug', 'A major 7 chord with a raised 5th.')];
-  if (c.kind === 'm6' || c.kind === 'm(maj7)') return [mk('melodicMinor', 'A minor chord with a major 6th or 7th is a tonic minor: melodic minor.')];
+  if (c.kind === 'm6' || c.kind === 'm(maj7)') return [mk('melodicMinor', 'A minor chord with a major 6th or 7th is a "home" minor chord: melodic minor fits.')];
   if (fam === 'min') {
-    const dor = mk('dorian', 'A minor 7 chord acting as a ii (it sets up a dominant): Dorian.');
+    const dor = mk('dorian', 'A minor 7 chord that leads to a five chord (a "two" chord): Dorian fits.');
     const isII = !!next && famOfKind(next) === 'dom' && semis(r, next.root) === 5;
     if (isII) return [dor];
     const major = key.mode === 'major';
-    if (major && deg === 4 || !major && deg === 7) return [mk('phrygian', 'It is the iii chord of the key: Phrygian keeps the notes of the key.'), dor];
-    if (major && deg === 9 || !major && deg === 0) return [mk('aeolian', major ? 'It is the vi chord of the key: Aeolian (natural minor) keeps the notes of the key.' : 'It is the home chord of the minor key: natural minor.'), dor];
+    if (major && deg === 4 || !major && deg === 7) return [mk('phrygian', 'It is the iii chord of the key: Phrygian uses only notes of the key.'), dor];
+    if (major && deg === 9 || !major && deg === 0) return [mk('aeolian', major ? 'It is the vi chord of the key: Aeolian (natural minor) uses only notes of the key.' : 'It is the home chord of the minor key: natural minor.'), dor];
     return [dor];
   }
   if (fam === 'hdim') return [mk('locrian', 'The half-diminished chord\'s own mode.'), mk('locrianNat2', 'Locrian with a natural 9: removes the avoid-note ♭9.')];
-  return [mk('wholeHalf', 'A diminished 7 chord: every tension sits a whole step above a chord tone.')];
+  return [mk('wholeHalf', 'A diminished 7 chord: every extra note sits a whole step above a chord note.')];
 }
 
 /* ---- extended chords and how their tensions move on ---- */
@@ -157,7 +157,7 @@ export function tensionMoves(c: PChord, next: PChord, key: Key): TensionMove[] {
       const t = find(list, d);
       if (!t) continue;
       const what = `the ${ORD[t.label] ?? t.label} of ${next.symbol}`;
-      const text = d === 0 ? `${fmt(x)} (${label}) stays: it is ${what}` : `${fmt(x)} (${label}) ${d < 0 ? 'falls' : 'rises'} a ${Math.abs(d) === 1 ? 'half' : 'whole'} step to ${fmt(t.n)}, ${what}`;
+      const text = d === 0 ? `${fmt(x)} (${label}) stays the same: it is ${what}` : `${fmt(x)} (${label}) moves ${d < 0 ? 'down' : 'up'} a ${Math.abs(d) === 1 ? 'half' : 'whole'} step to ${fmt(t.n)}, ${what}`;
       out.push({ note: x, label, semis: d, to: t.n, toLabel: t.label, text });
       break;
     }
@@ -197,7 +197,7 @@ export function leadsTo(id: ScaleId, root: Note): Lead[] {
     case 'dorian': return [{ chords: [T(P4, '7')], why: 'ii → V: up a fourth to a dominant.' }];
     case 'phrygian': return [{ chords: [T(P4, 'm7')], why: 'iii → vi: up a fourth.' }];
     case 'aeolian': return [{ chords: [T(P4, 'm7')], why: 'vi → ii: up a fourth.' }];
-    case 'locrian': case 'locrianNat2': return [{ chords: [T(P4, '7♭9'), T(m7, 'm7')], why: 'Minor ii–V: up a fourth to a V7♭9, then to the minor chord.' }];
+    case 'locrian': case 'locrianNat2': return [{ chords: [T(P4, '7♭9'), T(m7, 'm7')], why: 'Minor two-five: a V7♭9 chord a fourth up, then the minor chord.' }];
     case 'lydian': return [{ chords: [T(M2, '7')], why: 'IV → V: up a whole step.' }, { chords: [T(P5, 'maj7')], why: 'IV → I: plagal.' }];
     case 'wholeHalf': return [{ chords: [T(m2, 'm7')], why: 'Leading-tone °7: up a half step.' }, { chords: [T({ steps: 0, semis: 0 }, 'maj7')], why: 'Common-tone °7: same root.' }];
     default: return [];

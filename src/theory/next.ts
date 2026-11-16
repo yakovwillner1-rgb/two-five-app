@@ -20,9 +20,9 @@ const CHART: Record<Key['mode'], number[][]> = {
   minor: [[3, 4, 5, 6, 2, 1], [4], [5], [4, 1, 0], [0, 5], [1, 3], [2]],
 };
 const MOTION: Record<number, string> = {
-  1: 'the root rises a half step', 2: 'the root rises a whole step', 3: 'the root rises a third', 4: 'the root rises a third',
-  5: 'the root falls a fifth, the strongest root motion', 7: 'the root rises a fifth', 8: 'the root falls a third, so two notes stay',
-  9: 'the root falls a third, so two notes stay', 10: 'the root falls a whole step', 11: 'the root falls a half step', 6: 'the root moves a tritone',
+  1: 'the root moves up a half step', 2: 'the root moves up a whole step', 3: 'the root moves up a third', 4: 'the root moves up a third',
+  5: 'the root drops a fifth, a very common move', 7: 'the root moves up a fifth', 8: 'the root drops a third, so two notes stay the same',
+  9: 'the root drops a third, so two notes stay the same', 10: 'the root drops a whole step', 11: 'the root drops a half step', 6: 'the root jumps three whole steps',
 };
 
 export function nextChords(c: PChord, key: Key): NextOption[] {
@@ -37,41 +37,41 @@ export function nextChords(c: PChord, key: Key): NextOption[] {
     const major = key.mode === 'major';
     for (const t of CHART[key.mode][d]) {
       const x = H[t], step = mod(pcOf(x.root) - r, 12);
-      const named = d === 4 && t === 5 ? ' This is the deceptive cadence: the V lands on ' + rn(x) + ' instead of home.'
-        : d === 3 && t === 0 ? ' This is the plagal cadence.'
-        : d === 4 && t === 0 ? ' This is the perfect cadence: dominant to home.'
+      const named = d === 4 && t === 5 ? ' This is called a deceptive cadence: the V chord goes to ' + rn(x) + ' instead of home, a pleasant surprise.'
+        : d === 3 && t === 0 ? ' This is the "Amen" ending (IV to I).'
+        : d === 4 && t === 0 ? ' This is the classic ending: the V chord goes home.'
         : d === 0 ? ' From the home chord you can go anywhere.'
-        : major && d === 6 && t === 0 ? ' The leading-tone chord resolves home.' : '';
+        : major && d === 6 && t === 0 ? ' The chord a half step below home leads straight home.' : '';
       add(x, `${rn(c)} → ${rn(x)}: ${MOTION[step]}.${named}`);
     }
-    if (fam === 'hdim') { const v = makeChord(transpose(c.root, IV.P4), '7♭9'); add(v, `As the ii of a minor ii–V it goes to ${v.symbol}, which leads on to ${fmt(transpose(c.root, IV.m7))} minor.`); }
+    if (fam === 'hdim') { const v = makeChord(transpose(c.root, IV.P4), '7♭9'); add(v, `As the ii chord of a minor two-five it goes to ${v.symbol}, which leads on to ${fmt(transpose(c.root, IV.m7))} minor.`); }
     return out;
   }
   if (fam === 'dom') {
     const t5 = on(r + 5, 'maj7'), t1 = on(r + 11, 'maj7'), t2 = on(r + 2, 'maj7');
-    add(t5, `A dominant 7 resolves down a fifth: ${c.symbol} is the V7 of ${t5.symbol}.`);
-    add(t1, `As a tritone sub it resolves down a half step into ${t1.symbol}.`);
-    if (mod(r - pcOf(key.tonic), 12) === 10) add(t2, `As the backdoor ♭VII7 it resolves up a whole step into ${t2.symbol}.`);
+    add(t5, `A dominant 7 chord usually drops a fifth: ${c.symbol} is the five chord of ${t5.symbol}.`);
+    add(t1, `As a tritone sub it slides down a half step into ${t1.symbol}.`);
+    if (mod(r - pcOf(key.tonic), 12) === 10) add(t2, `As the "back door" ♭VII7 it steps up a whole step into ${t2.symbol}.`);
   } else if (fam === 'min') {
     const v = makeChord(transpose(c.root, IV.P4), '7');
-    add(v, `As a ii chord it goes up a fourth to its V7, ${v.symbol} (a ii–V).`);
+    add(v, `As a ii chord it goes up a fourth to its five chord, ${v.symbol}.`);
     add(H[0], `Back to the home chord, ${H[0].symbol}.`);
   } else if (fam === 'hdim') {
     const v = makeChord(transpose(c.root, IV.P4), '7♭9');
-    add(v, `As the ii of a minor ii–V it goes up a fourth to ${v.symbol}.`);
+    add(v, `As the ii chord of a minor two-five it goes up a fourth to ${v.symbol}.`);
   } else if (fam === 'dim') {
     const t = on(r + 1, 'm7');
-    add(t, `A leading-tone diminished chord resolves up a half step into ${t.symbol}.`);
+    add(t, `A diminished chord a half step below leads up into ${t.symbol}.`);
     const ct = H.find(h => pcOf(h.root) === r);
-    if (ct && !['dim', 'hdim'].includes(famOfKind(ct))) add(ct, `As a common-tone diminished chord it opens out into ${ct.symbol} on the same root.`);
+    if (ct && !['dim', 'hdim'].includes(famOfKind(ct))) add(ct, `As a diminished chord with the same bottom note, it opens out into ${ct.symbol}.`);
   } else if (fam === 'sus') {
-    add(makeChord(c.root, ''), 'The 4th falls to the 3rd.');
+    add(makeChord(c.root, ''), 'The 4th drops down to the 3rd.');
     add(on(r + 5, 'maj7'), 'Or straight down a fifth.');
   } else if (fam === 'aug') {
     const t = on(r + 5, 'maj7');
     add(t, `The raised 5th leans up a half step into the 3rd of ${t.symbol}.`);
   } else {
-    add(H[0], `A major chord from outside the key (${rn(c)}) falls back to the home chord.`);
+    add(H[0], `A major chord from outside the key (${rn(c)}) drops back to the home chord.`);
     add(H[4], `Or to the V, ${H[4].symbol}, which then goes home.`);
   }
   return out;

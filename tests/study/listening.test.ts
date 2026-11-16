@@ -7,7 +7,8 @@ describe('listening instructions use realized pitches', () => {
       { symbol: 'Cmaj7', beats: 4, midis: [36,59,64,67], names: ['C','B','E','G'] },
     ] };
     const cue = listeningCue(study)!;
-    expect(cue.text).toContain('D4 rises a whole step to E4');
+    expect(cue.text).toContain('D moves up a whole step');
+    expect(cue.text).toContain('to E.');
     expect(cue.fromMidi).toBe(62); expect(cue.toMidi).toBe(64);
   });
   it('does not invent a voice mapping between different-size voicings', () => {

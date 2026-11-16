@@ -65,7 +65,7 @@ export function wayButton(s: Suggestion, attrs: string, on: boolean, dim = false
   return `<button class="way${dim ? ' off' : ''}" ${attrs} data-flip="w:${s.techniqueId}.${s.variant ?? ''}" aria-pressed="${on}">
     <span class="wn">${s.name}${s.variantLabel ? ` <small>${s.variantLabel}</small>` : ''}</span>
     <span class="wc">${s.chords.map(c => c.symbol).join(' → ')}</span>
-    <span class="wt">${s.ext && s.ext.fit !== null ? `<span class="ptag fit" title="Preset score for selected extension pitch-class distances; not musical correctness">connection ${Math.round(s.ext.fit * 100)}%</span>` : ''}${s.colorTags.map(t => `<span class="ptag${t === S.pfeel ? ' on' : ''}">${t}</span>`).join('')}<span class="bright" style="margin:0 0 0 auto" title="Tension">${[0, 1, 2, 3, 4].map(k => `<i class="${k < bars ? 'on' : ''}"></i>`).join('')}</span></span>
+    <span class="wt">${s.ext && s.ext.fit !== null ? `<span class="ptag fit" title="A rough score for how smoothly your extra notes carry into this route. It is a guide, not a rule.">connection ${Math.round(s.ext.fit * 100)}%</span>` : ''}${s.colorTags.map(t => `<span class="ptag${t === S.pfeel ? ' on' : ''}">${t}</span>`).join('')}<span class="bright" style="margin:0 0 0 auto" title="Tension">${[0, 1, 2, 3, 4].map(k => `<i class="${k < bars ? 'on' : ''}"></i>`).join('')}</span></span>
   </button>`;
 }
 /** The chord a progression item stands for, before its picked extension. */

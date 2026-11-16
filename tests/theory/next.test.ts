@@ -42,8 +42,8 @@ describe('where a chord goes next', () => {
   });
   it('says why', () => {
     const o = nextChords(parseChord('G7')!, C);
-    expect(o[0].why).toBe('V7 → Imaj7: the root falls a fifth, the strongest root motion. This is the perfect cadence: dominant to home.');
-    expect(o[1].why).toBe('V7 → vi7: the root rises a whole step. This is the deceptive cadence: the V lands on vi7 instead of home.');
+    expect(o[0].why).toBe('V7 → Imaj7: the root drops a fifth, a very common move. This is the classic ending: the V chord goes home.');
+    expect(o[1].why).toBe('V7 → vi7: the root moves up a whole step. This is called a deceptive cadence: the V chord goes to vi7 instead of home, a pleasant surprise.');
   });
   it('never offers the chord itself, and always offers something', () => {
     for (const s of ['Cmaj7', 'Dm7', 'E7', 'F#dim7', 'Ab7', 'Bbm7', 'Ebmaj7', 'B+', 'G7sus4', 'Dm7b5', 'C']) for (const k of [C, Am]) {

@@ -140,14 +140,14 @@ function closeFamily(x: Ctx): Draft[] {
   const sub = set.map(s => x.pal.at(s)).filter(p => p.role !== 'chord' || !['R', '3', '♭3', '4', '5', '♭5', '♯5', '7', '♭7', '𝄫7', '6'].includes(p.label)).map(p => p.label);
   const subText = sub.length ? ` The ${sub.join(' and ')} take${sub.length === 1 ? 's' : ''} the place of ${sub.some(l => NINES.has(l)) ? 'the root' : ''}${sub.some(l => NINES.has(l)) && sub.some(l => !NINES.has(l)) ? ' and ' : ''}${sub.some(l => !NINES.has(l)) ? 'the 5th' : ''}.` : '';
   const sixth = sixthForSeventh(x.c, x.melody);
-  const sixText = sixth ? ' The root is on top, so the 6th takes the place of the 7th: the 7th would rub a half step under the melody.' : '';
-  out.push({ type: 'close', id: 'close', name: 'Close', midis: cl, sixth, why: `Every note as near as it goes under the melody, all inside one octave.${subText}${sixText}` });
+  const sixText = sixth ? ' The root is on top, so the 6th is played instead of the 7th. A 7th right under the melody would clash.' : '';
+  out.push({ type: 'close', id: 'close', name: 'Close', midis: cl, sixth, why: `Every note as close together as possible under the melody, all within one octave.${subText}${sixText}` });
   if (cl.length === 4) {
     const drop = (idx: number[]): number[] => cl.map((m, i) => (idx.includes(i) ? m - 12 : m)).sort((a, b) => a - b);
-    out.push({ type: 'drop2', id: 'drop2', name: 'Drop 2', midis: drop([2]), sixth, why: `The close voicing with its second note from the top dropped an octave: more open, the melody stands out.${sixText}` });
-    out.push({ type: 'drop3', id: 'drop3', name: 'Drop 3', midis: drop([1]), sixth, why: `The close voicing with its third note from the top dropped an octave: a wide gap above the bass note.${sixText}` });
-    out.push({ type: 'drop24', id: 'drop24', name: 'Drop 2 & 4', midis: drop([2, 0]), sixth, why: `The second and fourth notes from the top dropped an octave: the most open of the drop voicings.${sixText}` });
-    out.push({ type: 'block', id: 'block', name: 'Block chord (locked hands)', midis: [x.melody - 12, ...cl], left: [x.melody - 12], sixth, why: `George Shearing's locked hands: the close voicing with the melody doubled an octave below.${sixText}` });
+    out.push({ type: 'drop2', id: 'drop2', name: 'Drop 2', midis: drop([2]), sixth, why: `Like the close voicing, but the second note from the top is moved down an octave. It sounds more open, so the melody stands out.${sixText}` });
+    out.push({ type: 'drop3', id: 'drop3', name: 'Drop 3', midis: drop([1]), sixth, why: `Like the close voicing, but the third note from the top is moved down an octave. That leaves a wide gap above the bass note.${sixText}` });
+    out.push({ type: 'drop24', id: 'drop24', name: 'Drop 2 & 4', midis: drop([2, 0]), sixth, why: `The second and fourth notes from the top are moved down an octave. This is the most open sound of the drop voicings.${sixText}` });
+    out.push({ type: 'block', id: 'block', name: 'Block chord (locked hands)', midis: [x.melody - 12, ...cl], left: [x.melody - 12], sixth, why: `George Shearing's "locked hands" sound: the close voicing, plus the melody note doubled an octave lower.${sixText}` });
   }
   return out;
 }
@@ -187,8 +187,8 @@ function rootless(x: Ctx): Draft[] {
   };
   const dom = fam === 'dom', nine = n === 0 ? 'root (the 9 of this scale is an avoid note)' : '9';
   return [
-    build([s.third, f, s.seventh, n], 'rootlessA', 'Rootless A + melody', `Left hand ${dom ? '3-13-7-9' : '3-5-7-9'} with the ${nine} on top, no root; the right hand plays the melody.`),
-    build([s.seventh, n, s.third, f], 'rootlessB', 'Rootless B + melody', `Left hand ${dom ? '7-9-3-13' : '7-9-3-5'}, the 7th on the bottom, no root; the right hand plays the melody.`),
+    build([s.third, f, s.seventh, n], 'rootlessA', 'Rootless A + melody', `Left hand plays the 3rd, ${dom ? '13th' : '5th'}, 7th and 9th (${nine} on top). No root note. The right hand plays the melody.`),
+    build([s.seventh, n, s.third, f], 'rootlessB', 'Rootless B + melody', `Left hand plays the 7th, 9th, 3rd and ${dom ? '13th' : '5th'}, with the 7th lowest. No root note. The right hand plays the melody.`),
   ].filter((d): d is Draft => !!d);
 }
 
@@ -220,8 +220,8 @@ function sixthDim(x: Ctx): Draft[] {
   const as = same ? `${x.c.symbol} is played as ${six.symbol}` : `${x.c.symbol} is played as ${six.symbol} (the same notes${famOfKind(x.c) === 'dom' ? ' as its 5th, 7th, 9th and 3rd' : ''})`;
   return [{
     type: 'sixthDim', id: 'sixthDim', name: use === six ? 'Barry Harris: 6th chord' : 'Barry Harris: passing diminished', midis, label, sounds: use.symbol,
-    why: use === six ? `${as}. The melody is a note of that 6th chord, so the 6th chord sits under it.`
-      : `${as}. The melody is not in it: it is a passing note, so ${dim.symbol} sits under it and moves on to ${six.symbol}. Labels show each note inside ${dim.symbol}.`,
+    why: use === six ? `${as}. The melody is a note of that 6th chord, so that chord sits under it.`
+      : `${as}. The melody is not in it, so it is a passing note: ${dim.symbol} sits under it, then moves on to ${six.symbol}. The labels show each note's job inside ${dim.symbol}.`,
   }];
 }
 
@@ -231,8 +231,8 @@ function quartal(x: Ctx): Draft[] {
   const has3 = (ms: number[]): boolean => { const t = slots(x.c).third; return t !== null && ms.some(m => rel(x.c, m) === t); };
   const out: Draft[] = [], m = x.melody;
   const so = [m - 19, m - 14, m - 9, m - 4, m], q = [m - 15, m - 10, m - 5, m];
-  if (ok(so) && has3(so)) out.push({ type: 'soWhat', id: 'soWhat', name: 'So What', midis: so, left: so.slice(0, 2), why: 'Three perfect 4ths with a major 3rd on top (Bill Evans on "So What"). Every note is a chord tone or an available tension of this chord.' });
-  if (ok(q) && has3(q)) out.push({ type: 'quartal', id: 'quartal', name: 'Quartal (stacked 4ths)', midis: q, left: q.slice(0, 1), why: 'Perfect 4ths stacked under the melody. Every note is a chord tone or an available tension of this chord.' });
+  if (ok(so) && has3(so)) out.push({ type: 'soWhat', id: 'soWhat', name: 'So What', midis: so, left: so.slice(0, 2), why: 'Three notes a fourth apart, with a major third on top. This is the sound of "So What" (Miles Davis, Bill Evans). Every note fits this chord.' });
+  if (ok(q) && has3(q)) out.push({ type: 'quartal', id: 'quartal', name: 'Quartal (stacked 4ths)', midis: q, left: q.slice(0, 1), why: 'Notes stacked a fourth apart under the melody. Open and modern. Every note fits this chord.' });
   return out;
 }
 
@@ -269,7 +269,7 @@ function upper(x: Ctx): Draft[] {
     };
     out.push({
       type: 'upper', id: 'upper' + u.numeral, name: `Upper structure ${u.numeral}${u.minor ? ' (minor triad)' : ''}`, midis: [...left, ...right], left, label, sounds: full.symbol,
-      why: `${an(fmt(tri.root))} ${fmt(tri.root)} ${u.minor ? 'minor' : 'major'} triad in the right hand over the 3rd and 7th of ${fmt(x.c.root)}7 in the left. It adds the ${u.adds}: the chord sounds as ${full.symbol}.`,
+      why: `${an(fmt(tri.root))} ${fmt(tri.root)} ${u.minor ? 'minor' : 'major'} chord in the right hand, over the 3rd and 7th of ${fmt(x.c.root)}7 in the left. It adds the ${u.adds}, so the whole thing sounds like ${full.symbol}.`,
     });
   }
   return out;
@@ -307,7 +307,7 @@ function cluster(x: Ctx): Draft[] {
   const seconds = midis.filter((m, i) => i > 0 && m - midis[i - 1] <= 2).length;
   /* the same notes as the close voicing is not a second choice */
   if (!seconds || [...set].every(v => fw.includes(v))) return [];
-  return [{ type: 'cluster', id: 'cluster', name: 'Cluster (2nd inside)', midis, why: 'The 9th sits right next to another note, a 2nd apart, with no root: the rub that neo-soul voicings are known for.' }];
+  return [{ type: 'cluster', id: 'cluster', name: 'Cluster (2nd inside)', midis, why: 'The 9th sits right next to another note (a 2nd apart) and there is no root. That bit of rub is the neo-soul sound.' }];
 }
 
 /**
@@ -373,8 +373,8 @@ const ordOf = (label: string): string => ORD[label] ?? label;
 export function melodyCheck(c: PChord, melody: number, next: PChord | null, key: Key): MelodyCheck {
   const scale = leadScale(c, next, key), pal = palette(c, scale), p = pal.at(rel(c, melody)), name = fmt(p.note);
   const base = { role: p.role, note: p.note, label: p.label, scale };
-  if (p.role === 'chord') return { ...base, text: `${name} is the ${ordOf(p.label)} of ${c.symbol}: a chord tone.`, fixes: [] };
-  if (p.role === 'tension') return { ...base, text: `${name} is the ${ordOf(p.label)} of ${c.symbol}: an available tension (${fmt(scale.root)} ${scale.name}).`, fixes: [] };
+  if (p.role === 'chord') return { ...base, text: `${name} is the ${ordOf(p.label)} of ${c.symbol}. It is one of the chord's own notes, so it sounds safe.`, fixes: [] };
+  if (p.role === 'tension') return { ...base, text: `${name} is the ${ordOf(p.label)} of ${c.symbol}. It is not a chord note, but it fits and adds color (from the ${fmt(scale.root)} ${scale.name} scale).`, fixes: [] };
   const fixes: MelodyFix[] = [];
   /* 1. the same chord with a color that holds the note */
   const seen = new Set<string>();
@@ -382,12 +382,12 @@ export function melodyCheck(c: PChord, melody: number, next: PChord | null, key:
     const i = o.chord.tones.findIndex(t => pcOf(t) === mod(melody, 12));
     if (i < 0 || seen.has(o.chord.symbol) || fixes.filter(f => f.kind === 'color').length >= 2) continue;
     seen.add(o.chord.symbol);
-    fixes.push({ kind: 'color', chord: o.chord, text: `Play ${o.chord.symbol}: there ${name} is the ${ordOf(o.chord.labels[i])} (${o.scale.name}).` });
+    fixes.push({ kind: 'color', chord: o.chord, text: `Try ${o.chord.symbol}. There, ${name} is the ${ordOf(o.chord.labels[i])}, which fits (${o.scale.name}).` });
   }
   /* 2. a sus chord, when the note is the 4th over a dominant */
   if (famOfKind(c) === 'dom' && rel(c, melody) === 5 && !c.labels.includes('4')) {
     const sus = makeChord(c.root, '7sus4');
-    fixes.push({ kind: 'sus', chord: sus, text: `Play ${sus.symbol}: the 4th takes the place of the 3rd, so ${name} is a chord tone.` });
+    fixes.push({ kind: 'sus', chord: sus, text: `Try ${sus.symbol}. The 4th replaces the 3rd, so ${name} becomes one of the chord's notes.` });
   }
   /* 3. move the melody a half step to a note that fits */
   for (const d of [-1, 1]) {
@@ -402,11 +402,11 @@ export function melodyCheck(c: PChord, melody: number, next: PChord | null, key:
     .sort((a, b) => b.shared.length - a.shared.length).slice(0, 3)
     .forEach(({ h, shared }) => {
       const i = h.tones.findIndex(t => pcOf(t) === mod(melody, 12));
-      fixes.push({ kind: 'reharm', chord: h, text: `Reharmonize with ${h.symbol}: ${name} is its ${ordOf(h.labels[i])}${shared.length ? `, and it shares ${shared.map(fmt).join(', ')} with ${c.symbol}` : ''}.` });
+      fixes.push({ kind: 'reharm', chord: h, text: `Swap in ${h.symbol}. ${name} is its ${ordOf(h.labels[i])}${shared.length ? `, and it shares ${shared.map(fmt).join(', ')} with ${c.symbol}` : ''}.` });
     });
   const text = p.role === 'avoid'
-    ? `${name} is the ${ordOf(p.label)} of ${c.symbol}: a potential rub in this palette. Compare the actual voicing and melodic resolution.`
-    : `${name} is not in ${fmt(scale.root)} ${scale.name}, the scale of ${c.symbol} here: compare another palette or an intentional melodic tension.`;
+    ? `${name} is the ${ordOf(p.label)} of ${c.symbol}. It sits right next to a chord note, so it can sound crunchy if you hold it (musicians call this an avoid note). Listen to it: you may like it, or want to move it.`
+    : `${name} is not in the ${fmt(scale.root)} ${scale.name} scale that goes with ${c.symbol} here. It will sound like a clash unless you mean it. Try another chord, or move the note.`;
   return { ...base, text, fixes };
 }
 

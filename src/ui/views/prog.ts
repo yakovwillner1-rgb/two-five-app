@@ -55,9 +55,9 @@ export function progExtChoices(i: number): PChord[] {
 export function extPickerHTML(i: number): string {
   const cur = progChord(S.prog[i]), list = progExtChoices(i), next = i < S.prog.length - 1 ? progChord(S.prog[i + 1]) : null;
   const adds = (c: PChord): string => { const t = chordTensions(c); return t.length ? 'adds ' + t.map(x => `${fmt(x.note)} (${x.label})`).join(', ') : 'no extension'; };
-  return `<div class="vh"><span class="vs" style="font-size:1.5rem">${list[0].symbol}</span><span class="small">Which extension? ${next ? `From the scales that fit on the way to ${next.symbol}.` : 'From the scales that fit this chord.'}</span><button class="vx" data-a="vclose" aria-label="Close">×</button></div>
+  return `<div class="vh"><span class="vs" style="font-size:1.5rem">${list[0].symbol}</span><span class="small">Which extension? ${next ? `Ones that fit on the way to ${next.symbol}.` : 'From the scales that fit this chord.'}</span><button class="vx" data-a="vclose" aria-label="Close">×</button></div>
     <div class="ways">${list.map((c, j) => `<button class="way" data-a="pextset" data-i="${i}" data-k="${j === 0 ? '' : esc(c.kind)}" aria-pressed="${c.kind === cur.kind}"><span class="wn">${c.symbol}</span><span class="wc">${adds(c)}</span></button>`).join('')}</div>
-    <p class="small" style="margin:12px 0 0">The passing chords on both sides pick up extensions that connect to this one.</p>`;
+    <p class="small" style="margin:12px 0 0">The passing chords next to it change their extra notes to fit this one.</p>`;
 }
 
 export function viewProg(): string {
@@ -88,10 +88,10 @@ export function viewProg(): string {
    <div class="panel pstyle">
      <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
      <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
-     <p class="small" style="margin:0">Genre and feel set the order of the choices when you pick a passing.</p>
+     <p class="small" style="margin:0">Genre and feel decide which choices come first when you pick a passing chord.</p>
    </div>
    <div class="panel"><div class="lbl">Add a chord</div>${tilesHTML(H, -1, 'padd', 'r1')}
      <div class="psymrow"><input class="psym" data-f="prog" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type any chord and press Enter: Ebmaj7, F#m7b5, C/G" aria-label="Type a chord to add">${bad ? `<span class="small" style="color:var(--c5)">Can't read "${esc(bad)}".</span>` : ''}</div>
-     <p class="small" style="margin:12px 0 0">Tap a chord to hear it. Tap <b>+ extension</b> under a chord to add a 9, 11 or 13. Tap <b>+ passing</b> between two chords to choose how to get from one to the next: the passing chords pick up extensions that connect to yours. Each passing chord takes two beats.</p></div>
+     <p class="small" style="margin:12px 0 0">Tap a chord to hear it. Tap <b>+ extension</b> under a chord to add a 9, 11 or 13 (extra notes on top). Tap <b>+ passing</b> between two chords to choose how to get from one to the next. The passing chords change their extra notes to fit yours. Each passing chord lasts two beats.</p></div>
   </div>`;
 }

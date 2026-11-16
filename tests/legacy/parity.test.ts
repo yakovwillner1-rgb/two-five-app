@@ -74,8 +74,10 @@ describe('parity with the original index.html', () => {
           for (const view of ['parallel', 'parent'] as const) {
             L.S.mroot = pc; L.S.mview = view;
             const m = modeInfo(pc, fam, deg, view), o = L.modeInfo(fam, deg);
-            expect({ notes: ns(m.notes), tones: ns(m.chord.tones), q: m.chord.quality, sym: m.chord.symbol, name: m.name, formula: m.formula, parent: m.parent, char: m.char, sound: m.sound, use: m.use })
-              .toEqual({ notes: o.notes, tones: o.tones, q: o.q, sym: o.sym, name: o.name, formula: o.formula, parent: o.parent, char: o.char, sound: o.sound, use: o.use });
+            expect({ notes: ns(m.notes), tones: ns(m.chord.tones), q: m.chord.quality, sym: m.chord.symbol, name: m.name, formula: m.formula, parent: m.parent, char: m.char })
+              .toEqual({ notes: o.notes, tones: o.tones, q: o.q, sym: o.sym, name: o.name, formula: o.formula, parent: o.parent, char: o.char });
+            /* the one-line descriptions were rewritten in plain language on purpose (docs/HANDOFF.md); only theory is compared */
+            expect(typeof m.sound === 'string' && m.sound.length > 10 && typeof m.use === 'string' && m.use.length > 5).toBe(true);
             /* dominants: rootless voicings take the 13 since Phase 2 (see above) */
             const keep = (_x: unknown, i: number) => m.chord.quality !== '7' || (i !== 6 && i !== 7);
             expect(allVoicings(m.chord).map(flatV).filter(keep)).toEqual(L.VDEF.map((def: unknown) => L.buildVoicing(o, def)).filter(keep));

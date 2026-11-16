@@ -75,8 +75,8 @@ describe('extensions picked: the passing chords follow', () => {
     expect(s.chords.map(c => c.symbol)).toEqual(['G13']);
     expect(s.ext!.fit).toBe(1);
     expect(s.ext!.factor).toBe(EXT_BASE + 1);
-    expect(s.ext!.lines[0]).toBe('E, the 9th of Dm9, stays: it is the 13th of G13.');
-    expect(s.ext!.lines[2]).toBe('D, the 9th of Cmaj9, is already sounding: it is the 5th of G13.');
+    expect(s.ext!.lines[0]).toBe('E, the 9th of Dm9, stays the same: it is the 13th of G13.');
+    expect(s.ext!.lines[2]).toBe('D, the 9th of Cmaj9, is already there: it is the 5th of G13.');
   });
   it('does not repeat the start chord when it is extended (Dm9 then Dm7)', () => {
     expect(syms('Dm9', 'Cmaj9', 'secIIV.bright')).toEqual(['G13']);

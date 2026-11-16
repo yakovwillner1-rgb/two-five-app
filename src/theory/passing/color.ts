@@ -94,13 +94,13 @@ const step = (d: number): string => (Math.abs(d) === 1 ? 'a half step' : 'a whol
 const kindOf = (label: string): string => (CORE.has(label) ? '' : ', an extension');
 function leaveText(l: Link, from: PChord, next: PChord): string {
   const who = `${fmt(l.note)}, the ${ord(l.label)} of ${from.symbol},`;
-  if (l.semis === null) return `${who} has no note within a whole step in ${next.symbol}: it has to leap.`;
+  if (l.semis === null) return `${who} has no note within a whole step in ${next.symbol}: it has to jump.`;
   const what = `the ${ord(l.otherLabel)} of ${next.symbol}`;
-  return l.semis === 0 ? `${who} stays: it is ${what}.` : `${who} ${l.semis < 0 ? 'falls' : 'rises'} ${step(l.semis)} to ${fmt(l.other!)}, ${what}.`;
+  return l.semis === 0 ? `${who} stays the same: it is ${what}.` : `${who} moves ${l.semis < 0 ? 'down' : 'up'} ${step(l.semis)} to ${fmt(l.other!)}, ${what}.`;
 }
 function arriveText(l: Link, to: PChord, last: PChord): string {
   const who = `${fmt(l.note)}, the ${ord(l.label)} of ${to.symbol},`;
-  if (l.semis === null) return `${who} is not within a whole step of any note in ${last.symbol}: it arrives by leap.`;
+  if (l.semis === null) return `${who} is not within a whole step of any note in ${last.symbol}: it arrives with a jump.`;
   const what = `the ${ord(l.otherLabel)} of ${last.symbol}${kindOf(l.otherLabel)}`;
-  return l.semis === 0 ? `${who} is already sounding: it is ${what}.` : `${who} is reached ${l.semis > 0 ? 'up' : 'down'} ${step(l.semis)} from ${fmt(l.other!)}, ${what}.`;
+  return l.semis === 0 ? `${who} is already there: it is ${what}.` : `${who} is reached by moving ${l.semis > 0 ? 'up' : 'down'} ${step(l.semis)} from ${fmt(l.other!)}, ${what}.`;
 }

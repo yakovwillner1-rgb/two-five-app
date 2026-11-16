@@ -1,5 +1,7 @@
 import { toTop } from '../scroll';
-import { playNotes, stopAll } from '../../audio/player';
+import { playGrip, playNotes, stopAll } from '../../audio/player';
+import { gripNames, gripText, gripsWithTop, styleForGenre, type Grip } from '../../theory/guitar';
+import { chordBox } from '../fretboard';
 import { GENRES, GENRE_IDS } from '../../data/styles';
 import { S, curChords, curKey, curTitle, type KeptVoicing } from '../../state';
 import { impliedNext, leadVoicings, melodyCheck, parsePitch, pitchName, rankLead, voiceMotion, type LeadVoicing, type MelodyCheck, type RankedVoicing } from '../../theory/lead';
@@ -65,7 +67,7 @@ function checkHTML(m: Model): string {
   return `<div class="lcheck ${cls}"><span class="ltag">${tag}</span><span>${c.text}</span></div>${fixes}`;
 }
 function keptHTML(): string {
-  if (!S.lkept.length) return '<div class="panel"><h3>Voice-leading line</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
+  if (!S.lkept.length) return '<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0">Keep a voicing and it starts a line here. The next chord\'s voicings are then listed smoothest first.</p></div>';
   const cols = S.lkept.map((k, i) => {
     const prev = i > 0 ? S.lkept[i - 1] : null, mo = prev ? voiceMotion(prev.notes.map(n => n.m), k.notes.map(n => n.m)) : null;
     const rows = [...k.notes].reverse().map((n, j) => {
@@ -74,9 +76,18 @@ function keptHTML(): string {
     }).join('');
     return `${i > 0 ? `<div class="lvarr">→<small>${mo!.total}</small></div>` : ''}<button class="lvcol" data-a="lkhear" data-i="${i}" aria-label="Hear ${k.sym}, ${k.name}"><span class="cs2">${k.sym}</span><span class="small">${k.name}</span>${rows}</button>`;
   }).join('');
-  return `<div class="panel"><h3>Voice-leading line</h3><p class="small" style="margin:0 0 10px">Each column is a kept voicing, top note first. Under every note: how far it moved from the voicing before (in semitones). The number on each arrow is the total movement. Tap a column to hear it.</p>
+  return `<div class="panel"><h3>Your line of voicings</h3><p class="small" style="margin:0 0 10px">Each column is a voicing you kept, top note first. Under every note you see how far it moved from the voicing before (in half steps). The number on each arrow is the total. Tap a column to hear it.</p>
     <div class="lvline scrollx">${cols}</div>
     <div class="controls" style="margin-top:12px"><button class="pill sm go" data-a="lplay">Practice these in Play it</button><button class="pill sm" data-a="lkall">▶ Hear the line</button><button class="pill sm" data-a="lundo">Remove last</button><button class="pill sm" data-a="lkclear">Clear</button></div></div>`;
+}
+/** Guitar: grips with the melody note as the highest note (chord melody). */
+let LGR: Grip[] = [];
+function guitarLead(m: Model): string {
+  LGR = gripsWithTop(m.chord, S.lmel, styleForGenre(S.pgenre)).slice(0, 12);
+  const name = melName(m);
+  return `<div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${name} on top</h3><span class="small">${LGR.length} shape${LGR.length === 1 ? '' : 's'} on guitar, easiest first. The melody note is the highest string you play.</span></div>
+   ${LGR.length ? `<div class="cards extcards">${LGR.map((g, i) => `<article class="card r1"><div class="ch"><span class="cs">${g.name}</span><span class="cn">${g.sub}</span></div>${chordBox(g, m.chord.symbol)}<div class="small">frets ${gripText(g)} · notes ${gripNames(g)}</div><div class="small">${g.why}</div><div class="btns"><button class="hear" data-a="lgrip" data-i="${i}">▶ Hear it</button></div></article>`).join('')}</div>` : `<div class="empty">No guitar shape for ${m.chord.symbol} has ${name} as its top note. Try another chord or note.</div>`}
+   <p class="hint">Keeping shapes into a line is piano-only for now.</p>`;
 }
 function dynHTML(): string {
   const m = model(), n = m.ranked.length;
@@ -84,9 +95,10 @@ function dynHTML(): string {
       <div class="seg" role="group" aria-label="Move the melody by an octave"><button data-a="loct" data-v="-12" ${S.lmel - 12 < 40 ? 'disabled' : ''}>Octave down</button><button data-a="loct" data-v="12" ${S.lmel + 12 > 96 ? 'disabled' : ''}>Octave up</button></div>
       <input class="psym lmelin" data-f="mel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="or type it: E5, Bb4" aria-label="Type the melody note">${melBad ? `<span class="small" style="color:var(--c5)">Can't read "${esc(melBad)}". Type a note and an octave from E2 to C7, like E5 or Bb4.</span>` : ''}</div>
     ${checkHTML(m)}</div>
-   <div class="waysh"><h3 style="margin:0">${m.chord.symbol} with ${melName(m)} on top</h3><span class="small">${n} voicing${n === 1 ? '' : 's'}${m.prev ? `, smoothest from ${m.prev.sym} first` : `, ${GENRES[S.pgenre].label} favorites first`}. Gold = melody${n ? ', blue = left hand' : ''}.</span></div>
-   ${n ? `<div class="cards extcards">${m.ranked.map((r, i) => voicingCard(r, i, m)).join('')}</div>` : `<div class="empty">No voicing puts ${melName(m)} on top of ${m.chord.symbol}: the note has a different 3rd or 7th than the chord. Try a fix above, another note or another chord.</div>`}
-   ${keptHTML()}`;
+   ${S.inst === 'guitar' ? guitarLead(m) : ''}
+   <div class="waysh"${S.inst === 'guitar' ? ' hidden' : ''}><h3 style="margin:0">${m.chord.symbol} with ${melName(m)} on top</h3><span class="small">${n} voicing${n === 1 ? '' : 's'}${m.prev ? `, smoothest from ${m.prev.sym} first` : `, ${GENRES[S.pgenre].label} favorites first`}. Gold = melody${n ? ', blue = left hand' : ''}.</span></div>
+   ${S.inst === 'guitar' ? '' : n ? `<div class="cards extcards">${m.ranked.map((r, i) => voicingCard(r, i, m)).join('')}</div>` : `<div class="empty">No voicing puts ${melName(m)} on top of ${m.chord.symbol}: the note has a different 3rd or 7th than the chord. Try a fix above, another note or another chord.</div>`}
+   ${S.inst === 'guitar' ? '' : keptHTML()}`;
 }
 
 /** Redraw what changes with the melody, without rebuilding the piano (a key may be held down). */
@@ -107,6 +119,7 @@ export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'non
     case 'lext': S.lext = (d.k || null) as KindId | null; return 'render';
     case 'lsymx': S.lsym = null; S.lext = null; return 'render';
     case 'loct': { const x = S.lmel + +d.v!; if (x >= 40 && x <= 96) S.lmel = x; melBad = null; return 'draw'; }
+    case 'lgrip': { const g = LGR[+d.i!]; if (g) playGrip(g.notes.map(x => x.midi)); return 'none'; }
     case 'lhear': { const v = m().ranked[+d.i!]?.voicing; if (v) play(v.notes.map(n => n.midi)); return 'none'; }
     case 'lkeep': {
       const mm = m(), v = mm.ranked[+d.i!]?.voicing;
@@ -165,7 +178,7 @@ export function viewLead(): string {
      <span class="lab">Goes to</span><div>${tilesHTML(H, S.lnx ?? -1, 'lnext', 'r5', true)}
        <p class="small" style="margin:8px 0 0">${nextNote(m)}${S.lnx != null ? ' <button class="linkbtn" data-a="lnextx">Clear</button>' : ''}</p></div>
      <span class="lab">Genre</span><div><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div>
-       <p class="small" style="margin:8px 0 0">The genre's favorite voicing types are listed first. Once you keep a voicing, the smoothest voice leading comes first instead.</p></div>
+       <p class="small" style="margin:8px 0 0">The genre's favorite voicing types are listed first. Once you keep a voicing, the smoothest choice comes first instead.</p></div>
    </div>
    <div class="midibar" id="midibar"></div>
    <div class="pkwrap" id="pkwrap"></div>

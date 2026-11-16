@@ -132,8 +132,25 @@ export function vlSet(stage: HTMLElement, idx: number, dur: number): void {
     const t = g.querySelector('text'); if (t) t.textContent = p.n;
   });
 }
+/* guitar: one dot per string slides along its string to the fret of the next chord */
+interface GL { ids: string[]; ev: { col: string; dots: ({ x: number; n: string; role: string; cue: boolean } | null)[] }[] }
+export function glSet(stage: HTMLElement, idx: number, dur: number): void {
+  let d: GL | null = null; try { d = JSON.parse(stage.dataset.gl || ''); } catch { d = null; }
+  const e = d?.ev[idx]; if (!d || !e) return;
+  stage.style.setProperty('--vl', Math.max(.18, Math.min(.7, dur * .35)) + 's');
+  stage.dataset.role = e.col;
+  stage.querySelectorAll<SVGGElement>('.gdot').forEach((g, s) => {
+    const p = e.dots[s];
+    if (!p) { g.classList.add('gone'); return; }
+    const y = g.style.transform.match(/,\s*([-\d.]+)px/)?.[1] ?? '0';
+    g.classList.remove('gone', 'root', 'third', 'seventh', 'other'); g.classList.add(p.role); g.classList.toggle('cue', p.cue);
+    g.style.transform = `translate(${p.x}px,${y}px)`;
+    const t = g.querySelector('text'); if (t) t.textContent = p.n;
+  });
+}
 function vlGo(id: string, dur: number): void {
   document.querySelectorAll<HTMLElement>('.vl[data-vl]').forEach(st => { const d = vlData(st); const i = d ? d.ids.indexOf(id) : -1; if (d && i >= 0) vlSet(st, i, dur); });
+  document.querySelectorAll<HTMLElement>('.vl[data-gl]').forEach(st => { try { const d = JSON.parse(st.dataset.gl!) as GL; const i = d.ids.indexOf(id); if (i >= 0) glSet(st, i, dur); } catch { /* not a stage */ } });
 }
 export function vlReset(): void { document.querySelectorAll<HTMLElement>('.vl[data-vl]').forEach(st => { st.style.setProperty('--vl', '0s'); vlSet(st, 0, 0); void st.getBoundingClientRect(); st.style.removeProperty('--vl'); }); }
 

@@ -1,7 +1,23 @@
-# Handoff — 16 Nov 2026 (after v2 design + the Connect learning loop)
+# Handoff — 16 Nov 2026 (v2 design + Connect loop + guitar + plain-language text)
 
 For whoever picks this up next. Read `CLAUDE.md`, `docs/SPEC.md` and `docs/DESIGN.md` first; this file says where things stand
 and what is easy to get wrong.
+
+## Guitar and plain-language text (branch `feat/guitar`)
+- **Piano / Guitar switch** in the header (`S.inst`, saved). Everything that shows chord shapes follows it: Move (hero cards list the
+  notes and frets; the *Notes played* panel becomes a neck where one dot per string slides to the next chord), the voicing popover
+  (easy shapes: open, barre, 3-note; jazz shapes: drop 2, drop 3, no-root, fourths), Melody (shapes with the melody note on top),
+  Reharm (smoothest shapes through the chart; they do not follow the melody yet), Play it (a chord box for the target) and A/B.
+- **Theory:** `src/theory/guitar.ts` (pure). Rules 37–44 in `docs/THEORY_SOURCES.md`, cross-checked across jazzguitar.be,
+  jazz-guitar-licks.com, Fundamental Changes, Premier Guitar, Ted Greene and Mick Goodrick material; open questions 69–74.
+  `tests/theory/guitar.test.ts` has known-answer grips (e.g. Cmaj7 x-x-5-5-5-7, G7 3-x-3-4-3-x, Dm7 x-5-x-5-6-5, Em7 0-0-0-0-0-x) and a
+  sweep over 12 roots × 14 chord types.
+- **One resolved material:** the study carries frets/strings/grip for guitar, so what is shown, played (strummed, plucked-string sound
+  made in code, no samples), compared and practised is the same. Play it still takes piano keys or MIDI; the guitar shape is the target.
+- **Plain language:** the rule-generated explanations (techniques, extensions, melody checks, next chords, mode text, Guide, help
+  lines) were rewritten for beginners: short sentences, everyday words, terms explained where they first appear. Several tests that
+  pinned the old wording were updated; the legacy parity test now only checks the mode *theory*, not the one-line descriptions.
+- Not built on guitar: drop 2&4, alternate tunings, capo, left-handed, finger numbers, guitar *input* (no microphone, by rule).
 
 ## Baseline
 - **Live:** https://yakovwillner1-rgb.github.io/two-five-app/ = `main` at the merge of PR #11 (the **v2 design**). Load it twice
@@ -57,7 +73,7 @@ reserved space. Because the page scrolls inside `<main>`, use `toTop()` (`src/ui
 (`twofive-theme`). No schema validation, versioned migration or study export yet.
 
 ## Verification (and what is not)
-- `npm test`: 447 pass (26 files, one combined run). `npm run build` clean.
+- `npm test`: see the last run in the PR (guitar added 27 tests). `npm run build` clean.
 - Walkthrough in the built app: route selection (a non-ii–V route), save A, A-then-B, stop, hear a single line, practice the route
   with simulated notes to completion, try another target, groupLast saved. Phone 390 / tablet 820 / desktop 1366, with the tray
   and every `<details>` open: no horizontal overflow, no transport/nav overlap on any of the 12 tabs (390). Text contrast audited in

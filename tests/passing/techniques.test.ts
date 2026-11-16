@@ -110,7 +110,7 @@ describe('each technique', () => {
     expect(syms('G7', 'Am7', 'dimPass')).toEqual(['G♯°7']);
     expect(names(get('G7', 'Am7', 'dimPass')[0].chords[0].tones)).toBe('G# B D F');
     expect(get('Cmaj7', 'Dm7', 'dimPass')[0].romanNumerals).toEqual(['♯i°7']);
-    expect(get('Cmaj7', 'Dm7', 'dimPass')[0].explanation.join(' ')).toContain('A7♭9 without its root');
+    expect(get('Cmaj7', 'Dm7', 'dimPass')[0].explanation.join(' ')).toContain('A7♭9 with its bottom note missing');
   });
   it('chromatic approach and planing keep the quality of TO', () => {
     expect(syms('Cmaj7', 'Dm7', 'chromAbove')).toEqual(['E♭m7']);
@@ -216,29 +216,29 @@ describe('explanations', () => {
   const ex = (from: string, to: string, tech: TechniqueId) => get(from, to, tech)[0].explanation;
   it('secondary dominant C7 → Fmaj7 (SPEC example: "B♭ in C7 falls to A in Fmaj7")', () => {
     expect(ex('Cmaj7', 'Fmaj7', 'secDom')).toEqual([
-      'C7 is the dominant (V7) of Fmaj7.',
-      'Voice leading: B♭ in C7 falls a half step to A in Fmaj7; E in C7 rises a half step to F in Fmaj7.',
-      'B♭ is outside C major, borrowed from F major.',
-      'The root falls a fifth (C → F) and the tritone E–B♭ resolves inward.',
+      'C7 is the "five chord" of Fmaj7. It is the chord that most wants to go to Fmaj7.',
+      'Voice leading: B♭ in C7 moves down a half step to A in Fmaj7; E in C7 moves up a half step to F in Fmaj7.',
+      'B♭ is not in C major (borrowed from F major).',
+      'The bass drops a fifth (C → F). Two notes inside the chord, E and B♭, clash a little and then settle into Fmaj7.',
     ]);
   });
   it('names borrowed notes and where they come from ("A♭ is borrowed from C minor")', () => {
     const e = get('Cmaj7', 'Cmaj7', 'borrowed').find(s => s.variant === 'iv6')!.explanation;
-    expect(e[2]).toBe('A♭ is outside C major, borrowed from C minor.');
-    expect(e[1]).toBe('Voice leading: A♭ in Fm6 falls a half step to G in Cmaj7; F in Fm6 falls a half step to E in Cmaj7.');
+    expect(e[2]).toBe('A♭ is not in C major (borrowed from C minor).');
+    expect(e[1]).toBe('Voice leading: A♭ in Fm6 moves down a half step to G in Cmaj7; F in Fm6 moves down a half step to E in Cmaj7.');
   });
   it('says when nothing is borrowed', () => {
     expect(get('Cmaj7', 'Cmaj7', 'turnaround')[0].explanation[2]).toBe('Every note is inside C major.');
   });
   it('upper structure wording and no doubled voice-leading moves', () => {
     const s = get('Fmaj7', 'Cmaj7', 'upperStruct');
-    expect(s[0].explanation[0]).toBe('G13♯11 is the V7 of Cmaj7 played as an A major triad over the G7 shell (G B F).');
-    expect(s[0].explanation[3]).toContain('adds 9, ♯11 and 13 as color');
-    expect(s[2].explanation[1]).toBe('Voice leading: F in G7♯9 falls a half step to E in Cmaj7; B♭ in G7♯9 rises a half step to B in Cmaj7.');
+    expect(s[0].explanation[0]).toBe('G13♯11 is the five chord of Cmaj7. Play the three low notes G B F, then an A major chord on top. The top chord adds the colorful notes.');
+    expect(s[0].explanation[3]).toContain('adds the 9, ♯11 and 13 for color');
+    expect(s[2].explanation[1]).toBe('Voice leading: F in G7♯9 moves down a half step to E in Cmaj7; B♭ in G7♯9 moves up a half step to B in Cmaj7.');
     for (const x of s) expect(new Set(x.voiceLeading.map(m => pcOf(m.from))).size).toBe(x.voiceLeading.length);
   });
   it('tritone sub and common-tone °7', () => {
-    expect(ex('Cmaj7', 'Fmaj7', 'tritone')[0]).toBe('G♭7 is the tritone sub of C7, the V7 of Fmaj7: a dominant a tritone away that shares its 3rd and 7th.');
+    expect(ex('Cmaj7', 'Fmaj7', 'tritone')[0]).toBe('G♭7 swaps in for C7, the five chord of Fmaj7. Both chords share the same two key notes (the 3rd and the 7th), so the swap still works. This is called a tritone sub.');
     expect(ex('Cmaj7', 'Fmaj7', 'tritone')[3]).toContain('G♭ → F');
     expect(ex('G7', 'Cmaj7', 'dimCT')[3]).toContain('The root C stays put');
   });

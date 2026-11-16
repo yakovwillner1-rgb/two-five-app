@@ -62,6 +62,7 @@ function renderShell(): void {
       <div class="sndslot">${soundBox()}</div>
       <div class="kbd-help"><kbd>Space</kbd><span>Play or stop</span><kbd>← →</kbd><span>Change key</span><kbd>1–7</kbd><span>Land on a chord</span><kbd>Esc</kbd><span>Close a popup</span></div></div>`;
   $('tabbar').innerHTML = GROUPS.map(g => `<button data-a="group" data-v="${g.id}" ${g.id === grp.id ? 'aria-current="page"' : ''}>${ico(g.icon)}<span>${g.label}</span></button>`).join('');
+  $('instseg').innerHTML = (['piano', 'guitar'] as const).map(k => `<button data-a="inst" data-v="${k}" aria-pressed="${S.inst === k}">${k === 'piano' ? 'Piano' : 'Guitar'}</button>`).join('');
   $('tasknav').innerHTML = grp.tabs.map(([k, l]) => `<button data-a="tab" data-v="${k}" aria-pressed="${S.tab === k}">${l}</button>`).join('');
   const md = rootCtx(), pc = md ? modeRootPc() : S.pc;
   $('kbtn').innerHTML = `<span class="klab">${md ? 'Root' : 'Home key'}</span><span class="kname">${md ? fmt(homeKey(pc, S.mode).tonic) : curTitle()}</span><span class="chev">▼</span>`;
