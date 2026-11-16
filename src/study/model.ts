@@ -1,4 +1,4 @@
-import { fmt } from '../theory/notes';
+import { fmt, pcOf } from '../theory/notes';
 import type { PChord } from '../theory/symbols';
 import { TUNING, voiceLead, type GChord, type GuitarStyle } from '../theory/guitar';
 import { playbackVoicing } from '../theory/voicings';
@@ -31,10 +31,16 @@ export const defaultBeats = (n: number): number[] => Array.from({ length: n }, (
 export function resolveStudy(chords: PChord[], title: string, key: string, beats: number[] = defaultBeats(chords.length)): Study {
   let ref = 64;
   return {
-    title, key,
+    title, key, instrument: 'piano',
     events: chords.map((c, i) => {
-      const v = playbackVoicing(c.tones, ref); ref = v.ref;
-      const notes = v.notes.map((m, j) => ({ midi: m, name: fmt(c.tones[j]), label: c.labels[j] })).sort((a, b) => a.midi - b.midi);
+      /* a slash chord keeps its bass: the named bass note is the lowest note (the other tones above it, not doubled) */
+      const bassPc = c.bass ? pcOf(c.bass) : null;
+      const base = c.tones.map((n, j) => ({ n, label: c.labels[j] }));
+      const rest = bassPc == null ? base : base.filter(x => pcOf(x.n) !== bassPc);
+      const bassItem = bassPc == null ? null : { n: c.bass!, label: base.find(x => pcOf(x.n) === bassPc)?.label ?? 'bass' };
+      const parts = bassItem ? [bassItem, ...rest] : base;
+      const v = playbackVoicing(parts.map(x => x.n), ref); ref = v.ref;
+      const notes = v.notes.map((m, j) => ({ midi: m, name: fmt(parts[j].n), label: parts[j].label })).sort((a, b) => a.midi - b.midi);
       return { symbol: c.symbol, beats: beats[i] ?? 2, midis: notes.map(n => n.midi), names: notes.map(n => n.name), labels: notes.map(n => n.label) };
     }),
   };

@@ -7,6 +7,8 @@ import type { Suggestion } from '../../theory/passing/types';
 import { fmt } from '../../theory/notes';
 import { romanNumeral, type PChord } from '../../theory/symbols';
 import { chordTensions, plainOf } from '../../theory/tensions';
+import { resolveGuitarStudy, resolveStudy, studyEvents, type Study } from '../../study/model';
+import { styleForGenre } from '../../theory/guitar';
 import { esc, extChoices, findWay, playTones, progBase, progChord, rankedWays, wayButton, wayKey } from '../passing';
 import { cache, tilesHTML } from '../pieces';
 
@@ -24,16 +26,21 @@ export function progSteps(): ProgStep[] {
     return { chord: progChord(p), via: via && !via.replacesFrom ? via : null };
   });
 }
-/** Each passing chord 2 beats, each chord of the progression 4 beats. */
-playSources.prog = (): PlayEvent[] => {
-  const b = beat(), ev: PlayEvent[] = [];
-  let t = 0;
+/** The chords of the progression in playing order with their data-ev ids and beats: each passing chord 2 beats, each chord 4. */
+export function progSeq(): { chords: PChord[]; ids: string[]; beats: number[]; labels: string[] } {
+  const out = { chords: [] as PChord[], ids: [] as string[], beats: [] as number[], labels: [] as string[] };
   progSteps().forEach((st, i) => {
-    (st.via?.chords ?? []).forEach((c, j) => { ev.push({ t, dur: 2 * b, tones: playTones(c), id: `p${i}v${j}` }); t += 2 * b; });
-    ev.push({ t, dur: 4 * b, tones: playTones(st.chord), id: `p${i}c` }); t += 4 * b;
+    (st.via?.chords ?? []).forEach((c, j) => { out.chords.push(c); out.ids.push(`p${i}v${j}`); out.beats.push(2); out.labels.push(`Passing chord into chord ${i + 1}`); });
+    out.chords.push(st.chord); out.ids.push(`p${i}c`); out.beats.push(4); out.labels.push(`Chord ${i + 1} of the progression`);
   });
-  return ev;
-};
+  return out;
+}
+/** The progression as resolved musical material for the chosen instrument: what is shown, played, exported and practised. */
+export function progStudy(): Study {
+  const q = progSeq(), title = 'Progression';
+  return S.inst === 'guitar' ? resolveGuitarStudy(q.chords, title, curTitle(), q.beats, styleForGenre(S.pgenre)) : resolveStudy(q.chords, title, curTitle(), q.beats);
+}
+playSources.prog = (): PlayEvent[] => studyEvents(progStudy(), beat(), progSeq().ids).map(e => ({ ...e, tones: [] }));
 /** Length in bars (4 beats each). */
 export const progBars = (): number => progSteps().reduce((a, st) => a + 1 + (st.via ? st.via.chords.length / 2 : 0), 0);
 

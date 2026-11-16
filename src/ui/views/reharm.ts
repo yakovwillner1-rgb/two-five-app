@@ -6,7 +6,7 @@ import { FEEL_LABELS, GENRES, GENRE_IDS } from '../../data/styles';
 import { FEELS } from '../../data/techniques';
 import { ScoreError, parseMusicXml, scoreText, type GivenChord } from '../../midi/musicxml';
 import { SmfError, barsOf, bpmOf, parseSmf, tickToSec, writeSmf, type Bar, type SNote, type STrack, type Tempo, type TimeSig } from '../../midi/smf';
-import { S, curKey, curTitle, type KeptVoicing } from '../../state';
+import { S, curKey, curTitle, keptSet, type KeptVoicing } from '../../state';
 import { detectChart, detectKey, joinChart, skyline, type ANote, type KeyGuess, type Seg } from '../../theory/analyze';
 import { chartNotes, parseChartText, TEXT_PPQ } from '../../theory/chartText';
 import { homeKey, homeTitle } from '../../theory/home';
@@ -157,18 +157,18 @@ function play(): void {
   }
   const notes = [
     ...m.melody.map(n => ({ ...span(n.tick, n.dur), midi: n.midi, vol: 0.17 })),
-    ...m.voiced.flatMap(c => c.notes.map(n => ({ ...span(c.start, c.end - c.start), midi: n.midi, vol: n.midi === c.lead ? 0.13 : 0.09 }))),
+    ...m.voiced.flatMap((c, ci) => chordMidis(m, ci).map((midi, k) => ({ ...span(c.start, c.end - c.start), t: span(c.start, c.end - c.start).t + (S.inst === 'guitar' ? k * 0.022 : 0), midi, vol: midi === c.lead ? 0.13 : 0.09, ...(S.inst === 'guitar' ? { inst: 'guitar' as const } : {}) }))),
   ];
   playRaw(notes, m.voiced.map((c, i) => ({ t: sec(m, c.start), id: 'rc' + i })), 'x');
 }
 /** The version as a MIDI file: the melody track (when the tune has one) and the chord track, on the tune's own ticks, tempo and time signature. */
-export function reharmFile(m: Pick<ReharmModel, 'f' | 'melody' | 'voiced'>, label: string): Uint8Array {
+export function reharmFile(m: Pick<ReharmModel, 'f' | 'melody' | 'voiced'>, label: string, grips?: Grip[]): Uint8Array {
   const gap = Math.round(m.f.ppq / 24);
   return writeSmf({
     ppq: m.f.ppq, tempos: m.f.tempos, timeSigs: m.f.timeSigs,
     tracks: [
       ...(m.melody.length ? [{ name: 'Melody', notes: m.melody.map(n => ({ tick: n.tick, dur: n.dur, midi: n.midi, vel: 96, ch: 0 })) }] : []),
-      { name: 'Chords ' + label, notes: m.voiced.flatMap(c => c.notes.map(n => ({ tick: c.start, dur: Math.max(1, c.end - c.start - gap), midi: n.midi, vel: 72, ch: 1 }))) },
+      { name: 'Chords ' + label, notes: m.voiced.flatMap((c, i) => (grips?.[i] ? grips[i].notes.map(n => n.midi) : c.notes.map(n => n.midi)).map(midi => ({ tick: c.start, dur: Math.max(1, c.end - c.start - gap), midi, vel: 72, ch: 1 }))) },
     ],
   });
 }
@@ -176,7 +176,7 @@ function download(): void {
   const m = model();
   if (!m) return;
   const label = S.rview === 'orig' ? 'original chords' : S.rview;
-  const blob = new Blob([reharmFile(m, label) as BlobPart], { type: 'audio/midi' }), a = document.createElement('a');
+  const blob = new Blob([reharmFile(m, label, S.inst === 'guitar' ? guitarGrips(m) : undefined) as BlobPart], { type: 'audio/midi' }), a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `${m.f.name.replace(/\.midi?$/i, '') || 'reharm'} - ${label}.mid`;
   document.body.appendChild(a); a.click(); a.remove();
@@ -189,12 +189,18 @@ function toPlayIt(): void {
   const m = model();
   if (!m) return;
   const key = curKey();
-  S.lkept = m.voiced.map((c): KeptVoicing => {
+  if (S.inst === 'guitar') {
+    const grips = guitarGrips(m);
+    keptSet(m.voiced.map((c, i): KeptVoicing => ({ sym: c.chord.symbol, name: grips[i].name + ' · ' + grips[i].sub, notes: grips[i].notes.map((n, k) => ({ m: n.midi, n: noteName(n.note), lab: n.label, h: k === grips[i].notes.length - 1 ? 'R' : 'L' })), grip: grips[i] })));
+    S.px = 'lead'; S.tab = 'play';
+    return;
+  }
+  keptSet(m.voiced.map((c): KeptVoicing => {
     const notes: KeptVoicing['notes'] = c.notes.map(n => ({ m: n.midi, n: noteName(n.note), lab: n.label, h: n.midi === c.lead ? 'R' : 'L' }));
     /* the melody note is part of what you play, spelled the way the chord spells it */
     if (c.top !== null) { const mc = melodyCheck(c.chord, c.top, null, key); notes.push({ m: c.top, n: noteName(mc.note), lab: mc.label, h: 'R' }); }
     return { sym: c.chord.symbol, name: c.voicing, notes };
-  });
+  }));
   S.px = 'lead'; S.tab = 'play';
 }
 
@@ -215,7 +221,7 @@ export function reharmAction(a: string, d: DOMStringMap): boolean | 'none' {
     case 'rdown': download(); return true;
     case 'rsend': toPlayIt(); toTop(); return true;
     case 'rgrip': { const g = RGR[+d.i!]; if (g) playGrip(g.notes.map(n => n.midi)); return 'none'; }
-    case 'rhear': { const c = model()?.voiced[+d.i!]; if (c) playNotes([...c.notes.map(n => n.midi), ...(c.top !== null ? [c.top] : [])]); return 'none'; }
+    case 'rhear': { const mm = model(); if (mm && S.inst === 'guitar') { const g = guitarGrips(mm)[+d.i!]; if (g) playGrip(g.notes.map(n => n.midi)); return 'none'; } const c = mm?.voiced[+d.i!]; if (c) playNotes([...c.notes.map(n => n.midi), ...(c.top !== null ? [c.top] : [])]); return 'none'; }
     case 'ralt': R.edits[+d.t!] = d.s!; return true;
     case 'rreset': delete R.edits[+d.t!]; return true;
   }
@@ -261,8 +267,14 @@ const signed = (n: number): string => (n === 0 ? 'stays' : (n > 0 ? '↑' : '↓
 /** Every chord's voicing, top note first, with how far each note moved from the chord before. */
 /** Guitar: the smoothest grips through the chart (the melody is not matched here; use the Melody tab for that). */
 let RGR: Grip[] = [];
+export const guitarGrips = (m: ReharmModel): Grip[] => voiceLead(m.voiced.map(c => c.chord), styleForGenre(S.pgenre));
+/** The notes of chord i for the chosen instrument: what is shown, played, exported and practised. */
+export function chordMidis(m: ReharmModel, i: number): number[] {
+  if (S.inst === 'guitar') { RGR = guitarGrips(m); return RGR[i]?.notes.map(n => n.midi) ?? []; }
+  return m.voiced[i].notes.map(n => n.midi);
+}
 function guitarVoicingsHTML(m: ReharmModel): string {
-  RGR = voiceLead(m.voiced.map(c => c.chord), styleForGenre(S.pgenre));
+  RGR = guitarGrips(m);
   const cols = m.voiced.map((c, i) => `${i > 0 ? '<div class="lvarr">→</div>' : ''}<button class="lvcol${c.added ? ' added' : ''}" data-a="rgrip" data-i="${i}" data-ev="rc${i}" aria-label="Hear ${c.chord.symbol}"><span class="cs2">${c.chord.symbol}</span><span class="small">${RGR[i] ? RGR[i].name : ''} · bar ${c.bar + 1}</span>${RGR[i] ? chordBox(RGR[i], c.chord.symbol) + `<span class="small">${gripText(RGR[i])}</span>` : ''}</button>`).join('');
   return `<div class="panel"><h3>Guitar grips, chord to chord</h3>
     <p class="small" style="margin:0 0 10px">One shape per chord, picked so your hand moves as little as possible and notes that can stay put do. Tap a chord to hear it. These shapes do not follow the melody; for that, use the Melody tab.</p>
