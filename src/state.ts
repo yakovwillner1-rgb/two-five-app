@@ -16,6 +16,8 @@ export interface ProgChord { d: number; sym?: string; /** picked extension: the 
 export interface KeptVoicing { sym: string; name: string; notes: { m: number; n: string; lab: string; h: 'L' | 'R' }[] }
 export interface State {
   /** last tab used in each navigation group */
+  /** which instrument the app shows voicings for */
+  inst: 'piano' | 'guitar';
   groupLast: Record<string, Tab>;
   /** saved comparison A, and the study Play it practises (both saved) */
   studyA: Study | null; practiceStudy: Study | null;
@@ -45,7 +47,7 @@ export interface State {
   progBad: string | null;
 }
 export const S: State = {
-  groupLast: {}, studyA: null, practiceStudy: null, pickSide: null,
+  inst: 'piano', groupLast: {}, studyA: null, practiceStudy: null, pickSide: null,
   mode: 'major', pc: 0, tab: 'move', from: 0, to: 3, flavor: 'auto', tempo: 92, loop: false, playing: '', chart: 'major',
   prog: [{ d: 0, via: null }, { d: 3, via: 'secIIV' }], quiz: null, score: { r: 0, t: 0 }, tipDone: false, soundOut: null,
   px: 'move', pstrict: false, phint: true, pall: false, psound: false, midiOn: false,
@@ -57,7 +59,7 @@ export const S: State = {
 /* Same storage key as the single-file app, so saved settings carry over. */
 const LSK = 'twofive-v1';
 const snap = () => ({
-  groupLast: S.groupLast, studyA: S.studyA, practiceStudy: S.practiceStudy, soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
+  inst: S.inst, groupLast: S.groupLast, studyA: S.studyA, practiceStudy: S.practiceStudy, soundOut: S.soundOut, px: S.px, pstrict: S.pstrict, phint: S.phint, pall: S.pall, psound: S.psound, midiOn: S.midiOn, mode: S.mode, pc: S.pc, tab: S.tab,
   from: S.from, to: S.to, flavor: S.flavor, tempo: S.tempo, chart: S.chart, prog: S.prog, mfam: S.mfam, mview: S.mview, mdeg: S.mdeg, mroot: S.mroot,
   dmode: S.dmode, efam: S.efam, voiceHover: S.voiceHover, loop: S.loop, tipDone: S.tipDone,
   pgenre: S.pgenre, pfeel: S.pfeel, fromSym: S.fromSym, toSym: S.toSym, fromExt: S.fromExt, toExt: S.toExt, way: S.way, lhold: S.lhold, llatch: S.llatch,

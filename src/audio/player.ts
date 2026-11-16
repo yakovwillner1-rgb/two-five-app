@@ -4,12 +4,12 @@ import { mod, pcOf } from '../theory/notes';
 import { playbackVoicing } from '../theory/voicings';
 import type { Chord, Note } from '../theory/types';
 import { getOut, midiPanic, sendOff, sendOn, vel } from './midiOut';
-import { audio, silence, synthTone } from './synth';
+import { audio, pluckTone, silence, synthTone } from './synth';
 
 /* Playback: schedules chords and scales on the built-in synth or the chosen MIDI output. */
 let token = 0, timers: ReturnType<typeof setTimeout>[] = [];
 
-export interface PlayEvent { t: number; dur: number; tones: Note[]; /** exact pitches to play (a resolved study); `tones` is used when absent */ midis?: number[]; id?: string }
+export interface PlayEvent { t: number; dur: number; tones: Note[]; /** exact pitches to play (a resolved study); `tones` is used when absent */ midis?: number[]; id?: string; /** seconds between the notes of a strum (guitar) */ strum?: number; inst?: 'guitar' }
 
 export function clearLive(): void { document.querySelectorAll('.live').forEach(e => e.classList.remove('live')); }
 
@@ -33,10 +33,10 @@ function midiTone(out: MIDIOutput, m: number, t0: number, dur: number, v: number
   timers.push(setTimeout(() => sendOff(out, m), d + Math.max(60, dur * 1000 - 20)));
 }
 /** One note at audio-clock time t0, to MIDI out when a port is chosen, else the synth. */
-export function tone(midi: number, t0: number, dur: number, vol: number): void {
+export function tone(midi: number, t0: number, dur: number, vol: number, inst?: 'guitar'): void {
   const out = getOut();
   if (out) { midiTone(out, midi, t0, dur, vol); return; }
-  synthTone(midi, t0, dur, vol);
+  if (inst === 'guitar') pluckTone(midi, t0, dur, vol); else synthTone(midi, t0, dur, vol);
 }
 
 export function playSeq(events: PlayEvent[], tag: string, done?: () => void): void {
@@ -45,7 +45,7 @@ export function playSeq(events: PlayEvent[], tag: string, done?: () => void): vo
   let ref = 64, end = 0;
   events.forEach(ev => {
     const v = ev.midis ? { notes: ev.midis, ref } : playbackVoicing(ev.tones, ref); ref = v.ref;
-    v.notes.forEach((m, i) => { tone(m, t0 + ev.t, ev.dur, i === 0 ? 0.2 : 0.12); });
+    v.notes.forEach((m, i) => { tone(m, t0 + ev.t + i * (ev.strum ?? 0), ev.dur, i === 0 ? 0.2 : 0.12, ev.inst); });
     timers.push(setTimeout(() => {
       if (tok !== token) return;
       clearLive();
@@ -89,6 +89,12 @@ export function playNotes(ms: number[]): void {
   const c = audio(); stopAll();
   const t0 = c.currentTime + 0.05;
   ms.forEach((m, i) => tone(m, t0 + i * 0.03, 2.8, i === 0 ? 0.17 : 0.12));
+}
+/** A guitar grip as one slightly spread strum, low string first. */
+export function playGrip(ms: number[]): void {
+  const c = audio(); stopAll();
+  const t0 = c.currentTime + 0.05;
+  ms.forEach((m, i) => tone(m, t0 + i * 0.022, 2.8, i === 0 ? 0.17 : 0.12, 'guitar'));
 }
 /** A scale up and down over a drone on its root. Options: play the chord first, or the major scale first. */
 export function playScale(notes: Note[], opt: { chord?: Chord; compare?: boolean } = {}): void {

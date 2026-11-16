@@ -1,7 +1,7 @@
 import { toTop } from './scroll';
 import { rotateCircle } from './motion';
 import { toggleTheme } from './theme';
-import { playChords, playNotes, playScale, playSeq, stopAll, togglePlay } from '../audio/player';
+import { playChords, playGrip, playNotes, playScale, playSeq, stopAll, togglePlay } from '../audio/player';
 import { bindMidi, connectMIDI } from '../midi/input';
 import { S, curChords, curMode, earNotes, modeRootPc, rootCtx, save, setMode, type State, type Tab } from '../state';
 import { chordInfo } from '../theory/chords';
@@ -12,7 +12,7 @@ import { parseChord, type KindId } from '../theory/symbols';
 import type { Family, Flavor, HomeMode, ScaleType } from '../theory/types';
 import type { Genre } from '../data/styles';
 import type { Feel } from '../data/techniques';
-import { VOICES, cache, chordByKey } from './pieces';
+import { GRIPS, VOICES, cache, chordByKey } from './pieces';
 import { drawPlay, releaseAll, resetPL } from './play';
 import { findWay, progChord } from './passing';
 import { listeningCue, studyEvents } from '../study/model';
@@ -68,11 +68,13 @@ function onClick(e: MouseEvent): void {
     case 'pagain': resetPL(); drawPlay(); break;
     case 'tipx': S.tipDone = true; render(); break;
     case 'pchord': { const c = chordByKey(d.chord); if (c) playSeq([{ t: 0, dur: 2.4, tones: c.tones, id: d.ev }], 'x'); break; }
+    case 'inst': S.inst = d.v === 'guitar' ? 'guitar' : 'piano'; stopAll(); hidePop(); render(); break;
     case 'theme': toggleTheme(); break;
     case 'vtog': S.voiceHover = !S.voiceHover; hidePop(); b.setAttribute('aria-checked', String(S.voiceHover)); save(); break;
     case 'vopen': showPop(d.k, b, true); break;
     case 'vclose': hidePop(); break;
     case 'vall': showPop(d.k, null, true); break;
+    case 'grip': { const g = GRIPS[+d.v!]; if (g) playGrip(g.notes.map(n => n.midi)); break; }
     case 'voice': playNotes(VOICES[+d.v!].notes.map(i => i.midi)); break;
     case 'learn': S.mfam = d.fam as Family; S.mdeg = +d.deg!; S.mroot = +d.pc!; S.mview = 'parallel'; S.tab = 'modes'; stopAll(); render(); toTop(); break;
     case 'mfam': S.mfam = d.v as Family; stopAll(); render(); break;

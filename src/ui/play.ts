@@ -6,6 +6,7 @@ import { S, curMode, curTitle } from '../state';
 import { fmt, mod, note, pcOf } from '../theory/notes';
 import { PlaySession, buildSteps, voicingStep, type Step } from '../theory/playcheck';
 import { burstAt, confetti, countUp, reduced, ripple } from './motion';
+import { chordBox, eventBox } from './fretboard';
 import { cref, soundBox } from './pieces';
 import { ROLE_VAR, roleOfSymbol } from './role';
 import type { Flavor } from '../theory/types';
@@ -126,7 +127,8 @@ function targetHTML(): string {
   }
   const chips = `<div class="pchips">${P.steps.map((x, i) => `<span class="pc ${x.kind === 'chord' ? roleOfSymbol(x.chord.symbol) : x.kind === 'voicing' ? roleOfSymbol(x.symbol) : ''} ${i < P.i ? 'done' : i === P.i ? 'cur' : ''}">${x.kind === 'chord' ? x.chord.symbol : x.kind === 'voicing' ? x.symbol : ''}</span>`).join('<span class="arr">→</span>')}</div>`;
   if (st.kind === 'voicing') {
-    return `${chips}<div class="eyebrow" style="margin-top:14px">${st.label}</div><div class="pbig">${st.symbol}</div>
+    const ev = S.px === 'study' && S.practiceStudy?.instrument === 'guitar' ? S.practiceStudy.events[P.i] : null, box = ev ? eventBox(ev) : null;
+    return `${chips}<div class="eyebrow" style="margin-top:14px">${st.label}</div><div class="pbig">${st.symbol}</div>${box ? `<div class="pbox">${chordBox(box, st.symbol)}<span class="small">guitar shape · frets ${ev!.frets!.map(f => (f == null ? 'x' : f)).join(' ')}</span></div>` : ''}
       <p class="phow">Play this voicing, bottom to top: <b>${st.names.join(' · ')}</b>. Any octave counts.</p>${pstats()}`;
   }
   const c = st.chord;

@@ -1,5 +1,7 @@
 import { toTop } from '../scroll';
-import { playNotes, playRaw, stopAll } from '../../audio/player';
+import { playGrip, playNotes, playRaw, stopAll } from '../../audio/player';
+import { gripText, styleForGenre, voiceLead, type Grip } from '../../theory/guitar';
+import { chordBox } from '../fretboard';
 import { FEEL_LABELS, GENRES, GENRE_IDS } from '../../data/styles';
 import { FEELS } from '../../data/techniques';
 import { ScoreError, parseMusicXml, scoreText, type GivenChord } from '../../midi/musicxml';
@@ -212,6 +214,7 @@ export function reharmAction(a: string, d: DOMStringMap): boolean | 'none' {
     case 'rplay': if (S.playing) stopAll(); else play(); return 'none';
     case 'rdown': download(); return true;
     case 'rsend': toPlayIt(); toTop(); return true;
+    case 'rgrip': { const g = RGR[+d.i!]; if (g) playGrip(g.notes.map(n => n.midi)); return 'none'; }
     case 'rhear': { const c = model()?.voiced[+d.i!]; if (c) playNotes([...c.notes.map(n => n.midi), ...(c.top !== null ? [c.top] : [])]); return 'none'; }
     case 'ralt': R.edits[+d.t!] = d.s!; return true;
     case 'rreset': delete R.edits[+d.t!]; return true;
@@ -256,7 +259,17 @@ function versionHTML(m: ReharmModel): string {
 }
 const signed = (n: number): string => (n === 0 ? 'stays' : (n > 0 ? '↑' : '↓') + Math.abs(n));
 /** Every chord's voicing, top note first, with how far each note moved from the chord before. */
+/** Guitar: the smoothest grips through the chart (the melody is not matched here; use the Melody tab for that). */
+let RGR: Grip[] = [];
+function guitarVoicingsHTML(m: ReharmModel): string {
+  RGR = voiceLead(m.voiced.map(c => c.chord), styleForGenre(S.pgenre));
+  const cols = m.voiced.map((c, i) => `${i > 0 ? '<div class="lvarr">→</div>' : ''}<button class="lvcol${c.added ? ' added' : ''}" data-a="rgrip" data-i="${i}" data-ev="rc${i}" aria-label="Hear ${c.chord.symbol}"><span class="cs2">${c.chord.symbol}</span><span class="small">${RGR[i] ? RGR[i].name : ''} · bar ${c.bar + 1}</span>${RGR[i] ? chordBox(RGR[i], c.chord.symbol) + `<span class="small">${gripText(RGR[i])}</span>` : ''}</button>`).join('');
+  return `<div class="panel"><h3>Guitar grips, chord to chord</h3>
+    <p class="small" style="margin:0 0 10px">One shape per chord, picked so your hand moves as little as possible and notes that can stay put do. Tap a chord to hear it. These shapes do not follow the melody; for that, use the Melody tab.</p>
+    <div class="lvline scrollx">${cols}</div></div>`;
+}
 function voicingsHTML(m: ReharmModel): string {
+  if (S.inst === 'guitar') return guitarVoicingsHTML(m);
   const key = curKey();
   let total = 0, voices = 0, common = 0;
   const cols = m.voiced.map((c, i) => {
