@@ -168,3 +168,15 @@ Still open from Phase 2:
 67. **Typed charts** have no melody; the app picks the top note of each voicing. Should a melody be
     typable too (note names per bar)?
 68. **12 tabs:** the phone tab bar now scrolls sideways. Group the tabs instead?
+69. **Guitar grips: how much hand stretch?** Grips may cover up to 5 frets (5 marked "stretch"), up to
+    4 fingers with a barre. Many players stop at 4 frets. Tighter?
+70. **Rootless grips on guitar** are ranked last (a solo guitar should keep its root). Want a "there is
+    a bass player" switch that puts them first?
+71. **Fourths** (So What) are offered only on minor 7th chords. Want stacked fourths on dominant (7sus4)
+    and major (Lydian) chords too? There is no single agreed stack for those.
+72. **Not built on guitar:** drop 2&4, open-string "ringing" voicings in jazz, 7-string and alternate
+    tunings, capo, left-handed diagrams, finger numbers. Which first?
+73. **Guitar and the melody:** the Melody tab lists guitar grips with the melody note on top, but Reharm's
+    guitar grips do not follow the melody yet. Add it?
+74. **Guitar sound:** the built-in sound is a synthesized plucked string (no samples, works offline).
+    Fine for checking shapes; real playing goes out over MIDI (IAC to Logic) as a strum.
