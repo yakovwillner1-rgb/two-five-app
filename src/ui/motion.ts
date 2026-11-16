@@ -116,14 +116,16 @@ function onPlayEvent(ev: Event): void {
   vlGo(id, dur);
 }
 
-/* ---- voice leading: the 3rd and 7th dots slide from chord to chord ---- */
-interface VL { ids: string[]; pos: ({ x: number; y: number; n: string } | null)[][] }
+/* ---- the notes played: lit keys and the 3rd / 7th dots follow the chord that is playing ---- */
+interface VL { ids: string[]; ev: { keys: number[]; col: string; dots: ({ x: number; y: number; n: string } | null)[] }[] }
 function vlData(el: HTMLElement): VL | null { try { return JSON.parse(el.dataset.vl || ''); } catch { return null; } }
 export function vlSet(stage: HTMLElement, idx: number, dur: number): void {
-  const d = vlData(stage); if (!d || !d.pos[idx]) return;
+  const d = vlData(stage); const e = d?.ev[idx]; if (!d || !e) return;
   stage.style.setProperty('--vl', Math.max(.18, Math.min(.7, dur * .35)) + 's');
+  stage.dataset.role = e.col;
+  stage.querySelectorAll<SVGRectElement>('[data-m]').forEach(r => { if (e.keys.includes(+r.dataset.m!)) r.dataset.on = '1'; else delete r.dataset.on; });
   stage.querySelectorAll<SVGGElement>('.vl-dot').forEach((g, k) => {
-    const p = d.pos[idx][k];
+    const p = e.dots[k];
     if (!p) { g.classList.add('gone'); return; }
     g.classList.remove('gone');
     g.style.transform = `translate(${p.x}px,${p.y}px)`;

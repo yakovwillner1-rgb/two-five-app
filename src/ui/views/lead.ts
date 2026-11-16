@@ -1,3 +1,4 @@
+import { toTop } from '../scroll';
 import { playNotes, stopAll } from '../../audio/player';
 import { GENRES, GENRE_IDS } from '../../data/styles';
 import { S, curChords, curKey, curTitle, type KeptVoicing } from '../../state';
@@ -134,7 +135,7 @@ export function leadAction(a: string, d: DOMStringMap): 'draw' | 'render' | 'non
       }
       return 'render';
     }
-    case 'lplay': S.px = 'lead'; S.tab = 'play'; window.scrollTo(0, 0); return 'render';
+    case 'lplay': S.px = 'lead'; S.tab = 'play'; toTop(); return 'render';
   }
   return null;
 }

@@ -79,5 +79,14 @@ BPM sync: everything that follows playback uses `S.tempo` (`--beat`) and the cho
 stays in time when the tempo changes. Events come from `playSeq` in `src/audio/player.ts` as the
 `twofive:ev` document event `{ id, dur }`.
 
+## Move page parts (Connect loop)
+- **Chord tray** (`.tray`): opens under the path from a card's *change* chip; big role-coloured tiles; typing/extensions behind a `<details>`.
+- **Cue** (`.cue`): one sentence from the actually played pitches + *Hear just this line*; the two pitches are marked on cards and keys.
+- **Notes played** (`.vl`): keys light in the playing chord's role colour; 3rd/7th dots at their real pitch. Chord-tone diagrams elsewhere are
+  labelled *reference*: never mix the two.
+- **A / B** (`.compare`): glass strip, A labelled *saved*, B labelled *current*; `.cmp.live` rings the one being heard.
+- **Folds** (`details.fold`): why it works, guide tones, scales, chord details; closed by default.
+- **Layout:** header, scrolling `<main>`, transport are separate regions; wrap and grow text, never shrink labels to fit.
+
 ## Not built yet (later steps)
 Level-up moment and XP (Step 5, game layer), personal bests, daily challenge.

@@ -9,7 +9,7 @@ import { audio, silence, synthTone } from './synth';
 /* Playback: schedules chords and scales on the built-in synth or the chosen MIDI output. */
 let token = 0, timers: ReturnType<typeof setTimeout>[] = [];
 
-export interface PlayEvent { t: number; dur: number; tones: Note[]; id?: string }
+export interface PlayEvent { t: number; dur: number; tones: Note[]; /** exact pitches to play (a resolved study); `tones` is used when absent */ midis?: number[]; id?: string }
 
 export function clearLive(): void { document.querySelectorAll('.live').forEach(e => e.classList.remove('live')); }
 
@@ -44,7 +44,7 @@ export function playSeq(events: PlayEvent[], tag: string, done?: () => void): vo
   const tok = token, t0 = c.currentTime + 0.06;
   let ref = 64, end = 0;
   events.forEach(ev => {
-    const v = playbackVoicing(ev.tones, ref); ref = v.ref;
+    const v = ev.midis ? { notes: ev.midis, ref } : playbackVoicing(ev.tones, ref); ref = v.ref;
     v.notes.forEach((m, i) => { tone(m, t0 + ev.t, ev.dur, i === 0 ? 0.2 : 0.12); });
     timers.push(setTimeout(() => {
       if (tok !== token) return;

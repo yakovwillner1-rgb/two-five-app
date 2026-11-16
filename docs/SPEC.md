@@ -84,7 +84,8 @@ Phase 0 still ports today's behavior 1:1 (2-5 framing included). The reframe hap
   never listens to the port it sends to (feedback guard). Stop sends note-offs (no stuck notes).
 - Keyboard shortcuts: Space play/stop, ←/→ key, 1–7 land on chord, Esc close popup.
 - State persisted in localStorage. PWA: manifest, icons, offline service worker.
-- Layout: sidebar ≥1000 px, bottom tab bar below; sticky player bar. Dark theme, Fraunces/Manrope.
+- Layout: 4 groups (Explore, Build, Practice, Reference): sidebar ≥1000 px, 4-icon bottom bar + a row of the group's tabs below; header, scrolling main and transport are separate regions. Light default, dark option, Outfit (see docs/DESIGN.md).
+- **Connect loop (Move):** choose start/land on the hero cards, hear the route, one actual-note listening cue, three contrasting routes, save A and compare with B, practise the exact route, try another target (docs/HANDOFF.md).
 
 ---------------------------------------------------------------------------------------------------
 ## Phase 0 — Port to Vite + TypeScript (no new features)

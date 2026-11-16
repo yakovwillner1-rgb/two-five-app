@@ -1,3 +1,4 @@
+import { toTop } from '../scroll';
 import { playNotes, playRaw, stopAll } from '../../audio/player';
 import { FEEL_LABELS, GENRES, GENRE_IDS } from '../../data/styles';
 import { FEELS } from '../../data/techniques';
@@ -210,7 +211,7 @@ export function reharmAction(a: string, d: DOMStringMap): boolean | 'none' {
     case 'rview': S.rview = d.v as typeof S.rview; R.msg = ''; return true;
     case 'rplay': if (S.playing) stopAll(); else play(); return 'none';
     case 'rdown': download(); return true;
-    case 'rsend': toPlayIt(); window.scrollTo(0, 0); return true;
+    case 'rsend': toPlayIt(); toTop(); return true;
     case 'rhear': { const c = model()?.voiced[+d.i!]; if (c) playNotes([...c.notes.map(n => n.midi), ...(c.top !== null ? [c.top] : [])]); return 'none'; }
     case 'ralt': R.edits[+d.t!] = d.s!; return true;
     case 'rreset': delete R.edits[+d.t!]; return true;

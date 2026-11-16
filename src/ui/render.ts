@@ -35,9 +35,17 @@ const ICONS: Record<Tab, string> = {
   guide: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/>',
 };
 const ico = (k: Tab): string => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
-const NAV: [string, [Tab, string][]][] = [['Practice', [['move', 'Move'], ['prog', 'Progression'], ['lead', 'Melody'], ['reharm', 'Reharm'], ['listen', 'Listen'], ['play', 'Play it'], ['quiz', 'Drill']]], ['Reference', [['map', 'Cheat sheet'], ['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts']]], ['Learn', [['guide', 'Guide']]]];
+/** Four navigation groups. Sidebar (wide): headings with their tabs. Phone/tablet: one icon per group, its tabs as a row at the top. */
+export const GROUPS: { id: string; label: string; icon: Tab; tabs: [Tab, string][] }[] = [
+  { id: 'explore', label: 'Explore', icon: 'move', tabs: [['move', 'Move'], ['map', 'Cheat sheet']] },
+  { id: 'build', label: 'Build', icon: 'prog', tabs: [['prog', 'Progression'], ['lead', 'Melody'], ['reharm', 'Reharm']] },
+  { id: 'practice', label: 'Practice', icon: 'play', tabs: [['play', 'Play it'], ['listen', 'Listen'], ['quiz', 'Drill']] },
+  { id: 'reference', label: 'Reference', icon: 'guide', tabs: [['modes', 'Modes'], ['ext', 'Extensions'], ['chart', 'Charts'], ['guide', 'Guide']] },
+];
+export const groupOf = (t: Tab) => GROUPS.find(g => g.tabs.some(x => x[0] === t)) ?? GROUPS[0];
+/** The tab a group opens on: the one last used in it, else its first. */
+export const groupTab = (id: string): Tab => { const g = GROUPS.find(x => x.id === id)!; const last = S.groupLast[id]; return last && g.tabs.some(x => x[0] === last) ? last : g.tabs[0][0]; };
 export const TITLES: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody on top', reharm: 'Reharm', move: 'Move', prog: 'Progression', quiz: 'Drill', map: 'Cheat sheet', modes: 'Modes', ext: 'Extensions', chart: 'Charts', guide: 'Guide' };
-const SHORT: Record<Tab, string> = { play: 'Play it', listen: 'Listen', lead: 'Melody', reharm: 'Reharm', move: 'Move', prog: 'Prog', quiz: 'Drill', map: 'Cheat', modes: 'Modes', ext: 'Extend', chart: 'Charts', guide: 'Guide' };
 const VIEWS: Record<Tab, () => string> = { play: viewPlay, listen: viewListen, lead: viewLead, reharm: viewReharm, move: viewMove, prog: viewProg, map: viewMap, modes: viewModes, ext: viewExt, chart: viewChart, quiz: viewQuiz, guide: viewGuide };
 
 const $ = (id: string): HTMLElement => document.getElementById(id)!;
@@ -46,20 +54,20 @@ let dir = '';
 export function setDir(d: 'slide-l' | 'slide-r'): void { dir = d; }
 
 function renderShell(): void {
+  const grp = groupOf(S.tab);
+  S.groupLast[grp.id] = S.tab;
   $('side').innerHTML = `<div class="sb-brand"><h1>2‑5 <em>into anything</em></h1><p>Passing chords, modes and voicings</p></div>
-    ${NAV.map(([g, items]) => `<div class="sb-grp"><div class="eyebrow">${g}</div>${items.map(([k, l]) => `<button class="nav" data-a="tab" data-v="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${ico(k)}${l}</button>`).join('')}</div>`).join('')}
+    ${GROUPS.map(g => `<div class="sb-grp"><div class="eyebrow">${g.label}</div>${g.tabs.map(([k, l]) => `<button class="nav" data-a="tab" data-v="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${ico(k)}${l}</button>`).join('')}</div>`).join('')}
     <div class="sb-foot"><button class="switch" role="switch" data-a="vtog" aria-checked="${S.voiceHover}">Show voicing on hover<i></i></button>
       <div class="sndslot">${soundBox()}</div>
       <div class="kbd-help"><kbd>Space</kbd><span>Play or stop</span><kbd>← →</kbd><span>Change key</span><kbd>1–7</kbd><span>Land on a chord</span><kbd>Esc</kbd><span>Close a popup</span></div></div>`;
-  $('tabbar').innerHTML = NAV.flatMap(g => g[1]).map(([k]) => `<button data-a="tab" data-v="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${ico(k)}<span>${SHORT[k]}</span></button>`).join('');
+  $('tabbar').innerHTML = GROUPS.map(g => `<button data-a="group" data-v="${g.id}" ${g.id === grp.id ? 'aria-current="page"' : ''}>${ico(g.icon)}<span>${g.label}</span></button>`).join('');
+  $('tasknav').innerHTML = grp.tabs.map(([k, l]) => `<button data-a="tab" data-v="${k}" aria-pressed="${S.tab === k}">${l}</button>`).join('');
   const md = rootCtx(), pc = md ? modeRootPc() : S.pc;
   $('kbtn').innerHTML = `<span class="klab">${md ? 'Root' : 'Home key'}</span><span class="kname">${md ? fmt(homeKey(pc, S.mode).tonic) : curTitle()}</span><span class="chev">▼</span>`;
   $('kbtn').setAttribute('aria-label', md ? 'Pick root' : 'Pick home key');
   $('mode').innerHTML = md ? '' : `<div class="seg" role="group" aria-label="Major or minor key">${(Object.keys(HOME) as HomeMode[]).map(k => `<button data-a="mode" data-v="${k}" aria-pressed="${S.mode === k}">${HOME[k].label}</button>`).join('')}</div>`;
   $('htitle').textContent = TITLES[S.tab];
-  /* the phone tab bar scrolls sideways: keep the current tab in view */
-  const cur = $('tabbar').querySelector<HTMLElement>('[aria-current]');
-  if (cur && cur.offsetParent) $('tabbar').scrollLeft = Math.max(0, cur.offsetLeft - ($('tabbar').clientWidth - cur.offsetWidth) / 2);
 }
 function renderPlayer(): void {
   const t = S.tab, pl = $('player');
