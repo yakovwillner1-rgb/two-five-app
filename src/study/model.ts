@@ -18,6 +18,8 @@ export interface StudyEvent {
   labels?: string[];
   /** guitar only: fret per string, low to high (null = muted), the string of each note, and the grip's name */
   frets?: (number | null)[];
+  /** which finger plays each string (see guitar.ts assignFingers) */
+  fingers?: (number | null)[];
   strings?: number[];
   grip?: string;
 }
@@ -44,7 +46,7 @@ export function resolveGuitarStudy(chords: GChord[], title: string, key: string,
     title, key, instrument: 'guitar',
     events: chords.map((c, i) => {
       const g = grips[i];
-      return { symbol: c.symbol, beats: beats[i] ?? 2, midis: g.notes.map(n => n.midi), names: g.notes.map(n => fmt(n.note)), labels: g.notes.map(n => n.label), frets: g.frets, strings: g.notes.map(n => n.string), grip: g.name + ' · ' + g.sub };
+      return { symbol: c.symbol, beats: beats[i] ?? 2, midis: g.notes.map(n => n.midi), names: g.notes.map(n => fmt(n.note)), labels: g.notes.map(n => n.label), frets: g.frets, fingers: g.fingers, strings: g.notes.map(n => n.string), grip: g.name + ' · ' + g.sub };
     }),
   };
 }

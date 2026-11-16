@@ -1,6 +1,7 @@
 import { S, curMode } from '../../state';
 import { FAM } from '../../theory/modes';
 import { fmt, mod, pcOf } from '../../theory/notes';
+import { scaleNeck } from '../fretboard';
 import { kbAbs, type KeyItem } from '../keyboards';
 import { cref, famSeg } from '../pieces';
 
@@ -23,7 +24,7 @@ export function viewModes(): string {
      <p class="msound">${m.sound}</p>
      <div class="lbl">Steps of the scale (compared with major)</div><div class="notes">${m.formula.map((f, j) => `<span class="n ${cls(j)}">${f}</span>`).join('')}</div>
      <div class="lbl" style="margin-top:12px">Notes</div><div class="notes">${m.notes.map((n, j) => `<span class="n ${cls(j)}" data-ev="s${j}">${fmt(n)}</span>`).join('')}</div>
-     <div style="margin:16px 0 8px">${kbAbs(kitems, 24, true)}</div>
+     <div style="margin:16px 0 8px">${S.inst === 'guitar' ? scaleNeck(m.notes.map((n, j) => ({ pc: pcOf(n), name: fmt(n), kind: j === 0 ? 'root' as const : j === m.char ? 'char' as const : 'other' as const, idx: j }))) : kbAbs(kitems, 24, true)}</div>
      <div class="vleg"><span><i class="lg" style="background:var(--gold)"></i>Root</span><span><i class="lg" style="background:var(--c5)"></i>The note that gives it its sound (${m.formula[m.char]})</span><span><i class="lg" style="background:var(--c2)"></i>Other notes</span></div>
      <div class="mchord"><span class="lbl" style="margin:0">Its chord</span><span class="cs" data-chord="${k}">${m.chord.symbol}</span><span class="small">Use it over: ${m.use}</span></div>
      <div class="controls" style="justify-content:flex-start"><button class="pill" data-a="mchordplay">▶ Chord, then scale</button><button class="pill" data-a="mcomp">▶ Major, then this</button><button class="pill" data-a="vopen" data-k="${k}">Voicings</button></div>

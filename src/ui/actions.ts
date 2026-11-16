@@ -68,6 +68,7 @@ function onClick(e: MouseEvent): void {
     case 'pagain': resetPL(); drawPlay(); break;
     case 'tipx': S.tipDone = true; render(); break;
     case 'pchord': { const c = chordByKey(d.chord); if (c) playSeq([{ t: 0, dur: 2.4, tones: c.tones, id: d.ev }], 'x'); break; }
+    case 'neckl': S.neckLabel = d.v === 'note' ? 'note' : 'finger'; save(); document.querySelectorAll('.vl.gl').forEach(e => { e.classList.toggle('lbl-finger', S.neckLabel === 'finger'); e.classList.toggle('lbl-note', S.neckLabel === 'note'); }); document.querySelectorAll<HTMLElement>('[data-a="neckl"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.neckLabel))); break;
     case 'inst': S.inst = d.v === 'guitar' ? 'guitar' : 'piano'; stopAll(); hidePop(); render(); break;
     case 'theme': toggleTheme(); break;
     case 'vtog': S.voiceHover = !S.voiceHover; hidePop(); b.setAttribute('aria-checked', String(S.voiceHover)); save(); break;

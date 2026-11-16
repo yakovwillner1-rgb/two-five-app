@@ -133,7 +133,7 @@ export function vlSet(stage: HTMLElement, idx: number, dur: number): void {
   });
 }
 /* guitar: one dot per string slides along its string to the fret of the next chord */
-interface GL { ids: string[]; ev: { col: string; dots: ({ x: number; n: string; role: string; cue: boolean } | null)[] }[] }
+interface GL { ids: string[]; ev: { col: string; dots: ({ x: number; n: string; f: string; role: string; cue: boolean } | null)[] }[] }
 export function glSet(stage: HTMLElement, idx: number, dur: number): void {
   let d: GL | null = null; try { d = JSON.parse(stage.dataset.gl || ''); } catch { d = null; }
   const e = d?.ev[idx]; if (!d || !e) return;
@@ -145,7 +145,9 @@ export function glSet(stage: HTMLElement, idx: number, dur: number): void {
     const y = g.style.transform.match(/,\s*([-\d.]+)px/)?.[1] ?? '0';
     g.classList.remove('gone', 'root', 'third', 'seventh', 'other'); g.classList.add(p.role); g.classList.toggle('cue', p.cue);
     g.style.transform = `translate(${p.x}px,${y}px)`;
-    const t = g.querySelector('text'); if (t) t.textContent = p.n;
+    const tn = g.querySelector('.t-note'), tf = g.querySelector('.t-fin');
+    if (tn) tn.textContent = p.n;
+    if (tf) tf.textContent = p.f;
   });
 }
 function vlGo(id: string, dur: number): void {
@@ -180,4 +182,13 @@ export function rotateCircle(key: Element, then: () => void): boolean {
   });
   setTimeout(() => { turning = false; then(); }, dur + 140);
   return true;
+}
+
+/** Scroll each guitar neck so the frets in use are in view (the whole neck is drawn, wider than a phone). */
+export function positionNecks(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>('.neckscroll').forEach(el => {
+    const svg = el.querySelector('svg'); if (!svg) return;
+    const ratio = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+    el.scrollLeft = Math.max(0, (+(el.dataset.focus || 0) - 40) * ratio);
+  });
 }

@@ -15,7 +15,7 @@ import { listeningCue, pitchName, resolveGuitarStudy, resolveStudy, studyEvents,
 import { gripsFor, styleForGenre } from '../../theory/guitar';
 import { chordBox, neckStage } from '../fretboard';
 import { playedStage } from '../keyboards';
-import { cache, card, cref, tilesHTML } from '../pieces';
+import { cache, card, cref, keepOpen, tilesHTML } from '../pieces';
 
 /* Move: get from one chord to another. Every passing technique is a "way"; the 2-5 is one of them. */
 interface MoveModel { H: HomeChord[]; from: PChord; to: PChord; fromChoices: PChord[]; toChoices: PChord[]; badFrom: boolean; badTo: boolean; shown: Ranked[]; hidden: Ranked[]; list: Suggestion[]; sel: Suggestion | null }
@@ -149,21 +149,21 @@ export function viewMove(): string {
     <div class="cmp now" data-ev="study-b-mark"><span class="ab">B · current</span><b>${chain(nowB)}</b><small>${nowB.title} · ${nowB.key} · ${nowB.instrument === 'guitar' ? 'guitar' : 'piano'} · ${beatsOf(nowB)} beats</small><button class="pill sm" data-a="play">▶ Hear B</button></div>
     <div class="cmpact"><button class="pill go" data-a="study-ab">▶ A, then B</button><button class="pill sm" data-a="study-clear">Clear A</button></div>
     <p class="hint">B is whatever is selected above. Both play at ${S.tempo} bpm with the notes shown.</p></div>` : '';
-  const fold = (title: string, body: string, open = false) => `<details class="panel fold"${open ? ' open' : ''}><summary>${title}</summary><div class="foldbody">${body}</div></details>`;
+  const fold = (id: string, title: string, body: string) => `<details class="panel fold" ${keepOpen(id)}><summary>${title}</summary><div class="foldbody">${body}</div></details>`;
   return `<div class="stack connect">${tip}
    <div style="text-align:center"><div class="eyebrow">In ${curTitle()}</div><h2 class="sr">Get from ${m.from.symbol} to ${m.to.symbol}</h2></div>
    <section class="stage">${startPill}<div class="pathx">${path}</div>${tray}${cueHTML}${study.instrument === 'guitar' ? neckStage(study, q.ids, cls, cue) : playedStage(study, q.ids, cls, cue)}</section>
    <section class="panel routes"><div class="waysh"><h3>Other routes</h3><span class="small">Best for ${g.label} · ${FEEL_LABELS[S.pfeel].toLowerCase()}. Tap one to try it.</span></div>
      <div class="ways" data-flip-list>${topHTML || '<div class="empty">No routes for this pair in this style. Try another style or target.</div>'}</div>
-     <details class="more"><summary>All ${m.shown.length} routes, style and feel</summary>
+     <details class="more" ${keepOpen('routes')}><summary>All ${m.shown.length} routes, style and feel</summary>
        <div class="pcrow"><span class="lbl">Genre</span><div class="seg wrap" role="group" aria-label="Genre">${GENRE_IDS.map(k => `<button data-a="pgenre" data-v="${k}" aria-pressed="${S.pgenre === k}">${GENRES[k].label}</button>`).join('')}</div></div>
        <div class="pcrow"><span class="lbl">Feel</span><div class="seg wrap" role="group" aria-label="Feel">${FEELS.map(k => `<button data-a="pfeel" data-v="${k}" aria-pressed="${S.pfeel === k}">${FEEL_LABELS[k]}</button>`).join('')}</div></div>
        <div class="ways">${ways}</div>${hiddenNote}</details></section>
    <section class="applybar"><button class="pill" data-a="study-save">${A ? 'Replace A with this' : 'Save as A to compare'}</button><button class="pill go" data-a="study-practice">Practice this →</button></section>
    ${compare}
-   ${s ? fold(`Why it works · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}`, `<div class="why"><p class="small">What the technique does in general. The notes actually played are in the keyboard above.</p>${why}</div>`) : ''}
-   ${s ? fold('The 3rds and 7ths by name (reference)', `<p class="small" style="margin:0">The 3rd and 7th of each chord, by note name. Hum them one after the other and you hear the whole move. This is a simple guide: the keyboard above shows the exact notes played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
-   ${fold('Scales and extensions', ext)}
-   ${fold('Chord details and example voicings (reference)', `<div class="cards">${cards}</div>`)}
+   ${s ? fold('why', `Why it works · ${s.name}${s.variantLabel ? ' (' + s.variantLabel + ')' : ''}`, `<div class="why"><p class="small">What the technique does in general. The notes actually played are in the keyboard above.</p>${why}</div>`) : ''}
+   ${s ? fold('guide', 'The 3rds and 7ths by name (reference)', `<p class="small" style="margin:0">The 3rd and 7th of each chord, by note name. Hum them one after the other and you hear the whole move. This is a simple guide: the keyboard above shows the exact notes played.</p><div class="lines">${line('3rds', seq, cls, ['3', '♭3', '4'])}${line('7ths', seq, cls, ['7', '♭7', '𝄫7', '6'])}</div>`) : ''}
+   ${fold('scales', 'Scales and extensions', ext)}
+   ${fold('details', 'Chord details and example voicings (reference)', `<div class="cards">${cards}</div>`)}
   </div>`;
 }
