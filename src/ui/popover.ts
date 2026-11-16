@@ -24,7 +24,7 @@ function pickerHTML(): string {
     }
   });
   return `<div class="vh"><span class="vs" style="font-size:1.4rem">${md ? 'Pick a root' : 'Pick a key'}</span><button class="vx" data-a="vclose" aria-label="Close">×</button></div>
-    <svg class="cof" viewBox="0 0 360 360">${g}<text class="cofc" x="180" y="172">Circle</text><text class="cofc" x="180" y="190">of fifths</text></svg>
+    <svg class="cof" viewBox="0 0 360 360"><g class="ring">${g}</g><text class="cofc" x="180" y="172">Circle</text><text class="cofc" x="180" y="190">of fifths</text></svg>
     <p class="small" style="margin:4px 0 0">${md ? 'Neighbors on the circle share all but one note.' : 'Outer ring: major keys. Inner ring: minor keys. Neighbors share all but one note, so moving one step is the smallest key change.'}</p>`;
 }
 function placePop(el: Element, pw: number): void {

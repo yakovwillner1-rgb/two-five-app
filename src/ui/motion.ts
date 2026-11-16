@@ -102,7 +102,7 @@ function onPlayEvent(ev: Event): void {
   document.documentElement.style.setProperty('--beat', beat + 's');
   const els = document.querySelectorAll<HTMLElement>('[data-ev="' + id + '"]');
   if (!reduced()) els.forEach(e => {
-    if (e.classList.contains('blk')) e.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1)', offset: .3 }, { transform: 'scale(1)' }], { duration: Math.min(beat * 800, 600), easing: SPRING });
+    if (e.classList.contains('blk') || e.classList.contains('half') || e.classList.contains('bar')) e.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1)', offset: .3 }, { transform: 'scale(1)' }], { duration: Math.min(beat * 800, 600), easing: SPRING });
     /* the light that travels along the arrow after this card, arriving exactly as the next chord starts */
     const ar = e.nextElementSibling;
     if (ar?.classList.contains('ar')) {
@@ -136,3 +136,29 @@ function vlGo(id: string, dur: number): void {
 export function vlReset(): void { document.querySelectorAll<HTMLElement>('.vl[data-vl]').forEach(st => { st.style.setProperty('--vl', '0s'); vlSet(st, 0, 0); void st.getBoundingClientRect(); st.style.removeProperty('--vl'); }); }
 
 export function initMotion(): void { document.addEventListener('twofive:ev', onPlayEvent); }
+
+/* ---- circle of fifths: the ring turns to put the tapped key on top, its neighbours pulse, then the key changes ---- */
+let turning = false;
+export function rotateCircle(key: Element, then: () => void): boolean {
+  const ring = key.closest('.cof')?.querySelector<SVGGElement>('.ring');
+  if (!ring || reduced() || turning) return false;
+  const pt = (k: Element) => { const c = k.querySelector('circle')!; return { x: +c.getAttribute('cx')! - 180, y: +c.getAttribute('cy')! - 180 }; };
+  const p = pt(key), ang = (Math.atan2(p.y, p.x) * 180) / Math.PI + 90;   /* degrees clockwise from the top */
+  const turn = ((ang + 180) % 360 + 360) % 360 - 180;                     /* shortest way round */
+  turning = true;
+  const dur = 520;
+  ring.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${-turn}deg)` }], { duration: dur, easing: SPRING, fill: 'forwards' });
+  ring.querySelectorAll<SVGGElement>('.ck').forEach(k => {
+    k.style.transformBox = 'fill-box'; k.style.transformOrigin = 'center';
+    k.animate([{ transform: 'rotate(0deg)' }, { transform: `rotate(${turn}deg)` }], { duration: dur, easing: SPRING, fill: 'forwards' });
+  });
+  /* the keys next to it on the circle (one fifth either side, and its relative minor) pulse */
+  const all = [...ring.querySelectorAll<SVGGElement>('.ck:not(.mi)')], i = all.indexOf(key as SVGGElement);
+  if (i >= 0) [-1, 1].forEach(dx => {
+    const c = all[(i + dx + 12) % 12].querySelector('circle')!;
+    c.style.transformBox = 'fill-box'; c.style.transformOrigin = 'center';
+    c.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.28)', offset: .6 }, { transform: 'scale(1)' }], { duration: 640, delay: dur * .5, easing: SPRING });
+  });
+  setTimeout(() => { turning = false; then(); }, dur + 140);
+  return true;
+}

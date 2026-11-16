@@ -1,3 +1,4 @@
+import { rotateCircle } from './motion';
 import { toggleTheme } from './theme';
 import { playChords, playNotes, playScale, playSeq, stopAll, togglePlay } from '../audio/player';
 import { bindMidi, connectMIDI } from '../midi/input';
@@ -50,7 +51,11 @@ function onClick(e: MouseEvent): void {
     case 'kprev': step(-1); break;
     case 'knext': step(1); break;
     case 'kpick': if (pickerJustClosed()) break; showPicker(b); break;
-    case 'pick': if (rootCtx()) S.mroot = +d.pc!; else { setMode(d.m as HomeMode); S.pc = +d.pc!; } stopAll(); render(); break;
+    case 'pick': {
+      const go = () => { if (rootCtx()) S.mroot = +d.pc!; else { setMode(d.m as HomeMode); S.pc = +d.pc!; } stopAll(); render(); };
+      if (!rotateCircle(b, go)) go();
+      break;
+    }
     case 'px': S.px = d.v as State['px']; render(); break;
     case 'pstrict': S.pstrict = d.v === '1'; render(); break;
     case 'phint': S.phint = !S.phint; render(); break;

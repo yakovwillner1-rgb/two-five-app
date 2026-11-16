@@ -735,9 +735,50 @@ html[data-theme="dark"] .vl-dot.d3 text{fill:#0B1A21}
 @keyframes pop{0%{transform:scale(.86);opacity:.2}55%{transform:scale(1.07);opacity:1}100%{transform:none;opacity:1}}
 .popin{animation:pop var(--t-slow) var(--ease-spring) both}
 
+/* ---------- rollout: every other tab ---------- */
+.cof .ring{transform-origin:180px 180px}
+.ck circle{fill:var(--glass-2);stroke:none;filter:drop-shadow(0 3px 0 var(--line))}
+.ck:hover circle{stroke:var(--accent);stroke-width:3}
+.ck.on circle{fill:var(--accent);filter:drop-shadow(0 3px 0 color-mix(in srgb,var(--accent) 60%,var(--ink)))}
+.ck.mi circle{fill:var(--tint)}.ck.mi.on circle{fill:var(--accent)}
+
+/* Progression: the chain of chords as colour blocks */
+.bars,.bars.flexbars{border:0;background:none;overflow:visible;border-radius:0;gap:12px;display:flex;flex-wrap:wrap;align-items:stretch}
+.flexbars .bar{border:0;border-radius:var(--r-xl);min-height:132px;background:var(--glass);transition:transform var(--t-med) var(--ease-spring),box-shadow var(--t-med) var(--ease-out)}
+.flexbars .bar.tg{--rc:var(--c0);background:linear-gradient(150deg,color-mix(in srgb,var(--rc) 68%,var(--lift)),var(--rc) 55%,color-mix(in srgb,var(--rc) 84%,#5b2fb8) 135%);color:var(--on-fill);box-shadow:0 7px 0 color-mix(in srgb,var(--rc) 55%,var(--ink)),0 24px 36px -22px var(--rc)}
+.flexbars .bar.tg.r1{--rc:var(--gold)}.flexbars .bar.tg.r2{--rc:var(--c2)}.flexbars .bar.tg.r5{--rc:var(--c5)}
+.flexbars .bar.tg .tgb span{font-size:2.4rem;font-weight:800;color:var(--on-fill);letter-spacing:-.02em}
+.flexbars .bar.tg .tgb small,.flexbars .bar.tg .x{color:var(--on-fill);opacity:.8}
+.bar.ap{background:var(--glass);padding:8px;gap:8px;display:flex}
+.half{border:0!important;border-radius:var(--r-lg);color:var(--on-fill);background:linear-gradient(150deg,color-mix(in srgb,var(--rc) 68%,var(--lift)),var(--rc));box-shadow:0 5px 0 color-mix(in srgb,var(--rc) 55%,var(--ink));transition:transform var(--t-med) var(--ease-spring),box-shadow var(--t-med)}
+.half span{font-size:1.7rem;font-weight:800;color:var(--on-fill)}
+.half small{color:var(--on-fill);opacity:.8}
+.bar.live,.half.live{translate:0 -5px;scale:1.04;z-index:2;box-shadow:0 7px 0 color-mix(in srgb,var(--rc) 55%,var(--ink)),0 0 0 4px var(--bg),0 0 0 7px var(--rc),0 24px 40px -14px var(--rc)}
+.bar .tog{background:var(--glass-2);color:var(--ink);border:0;box-shadow:var(--shadow-edge)}
+.bar .tog.on{background:var(--grad-accent);color:var(--on-accent)}
+.viaadd{background:transparent;border:2px dashed var(--accent);border-radius:var(--r-pill)}
+.bar.via{background:none;box-shadow:none}
+
+/* Drill and quizzes: big question, bouncy answers */
+.quiz .q,.q{font-weight:800}
+.choice{min-height:60px;font-size:1.05rem}
+.choice.right{animation:pop var(--t-slow) var(--ease-spring) both}
+.choice.wrong{animation:shake .32s var(--ease-out)}
+.qa{gap:12px}
+.mchord .cs{cursor:help}
+
+/* Modes, lists, tables */
+.lad{box-shadow:var(--shadow-edge)}
+.row{border-bottom:0}
+.row.head{background:none}
+.scrollx .row:nth-child(even){background:var(--tint)}
+.row.hl{background:color-mix(in srgb,var(--rc) 14%,transparent)}
+.eg div{border:0}
+
 @media (max-width:760px){
-  .stage .pathx{flex-wrap:wrap;gap:10px}.stage .ar{display:none}
-  .stage .pathx .blk{flex:1 1 40%}
+  .stage .pathx{flex-wrap:wrap;gap:14px}.stage .pathx .ar{display:none}
+  .stage .pathx .blk{flex:1 1 calc(50% - 14px)}
+  .seg{flex-wrap:wrap}.seg button{flex:1 1 auto}
   .stats3{grid-template-columns:1fr 1fr 1fr}
 }
 @media (prefers-reduced-motion:reduce){
